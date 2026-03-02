@@ -127,6 +127,42 @@ namespace MovieRentalApp.Migrations
                     b.ToTable("MovieGenres");
                 });
 
+            modelBuilder.Entity("MovieRentalApp.Models.Notification", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsRead")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("Notifications");
+                });
+
             modelBuilder.Entity("MovieRentalApp.Models.Payment", b =>
                 {
                     b.Property<int>("Id")
@@ -192,23 +228,6 @@ namespace MovieRentalApp.Migrations
                     b.ToTable("Rentals");
                 });
 
-            modelBuilder.Entity("MovieRentalApp.Models.Role", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Roles");
-                });
-
             modelBuilder.Entity("MovieRentalApp.Models.User", b =>
                 {
                     b.Property<int>("UserId")
@@ -235,9 +254,6 @@ namespace MovieRentalApp.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int?>("RoleId")
-                        .HasColumnType("int");
-
                     b.Property<string>("UserEmail")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -248,8 +264,6 @@ namespace MovieRentalApp.Migrations
                         .HasColumnType("nvarchar(150)");
 
                     b.HasKey("UserId");
-
-                    b.HasIndex("RoleId");
 
                     b.ToTable("Users");
                 });
@@ -311,6 +325,17 @@ namespace MovieRentalApp.Migrations
                     b.Navigation("Movie");
                 });
 
+            modelBuilder.Entity("MovieRentalApp.Models.Notification", b =>
+                {
+                    b.HasOne("MovieRentalApp.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("MovieRentalApp.Models.Payment", b =>
                 {
                     b.HasOne("MovieRentalApp.Models.User", "User")
@@ -339,13 +364,6 @@ namespace MovieRentalApp.Migrations
                     b.Navigation("Movie");
 
                     b.Navigation("User");
-                });
-
-            modelBuilder.Entity("MovieRentalApp.Models.User", b =>
-                {
-                    b.HasOne("MovieRentalApp.Models.Role", null)
-                        .WithMany("Users")
-                        .HasForeignKey("RoleId");
                 });
 
             modelBuilder.Entity("MovieRentalApp.Models.Wishlist", b =>
@@ -379,11 +397,6 @@ namespace MovieRentalApp.Migrations
                     b.Navigation("Rentals");
 
                     b.Navigation("Wishlists");
-                });
-
-            modelBuilder.Entity("MovieRentalApp.Models.Role", b =>
-                {
-                    b.Navigation("Users");
                 });
 
             modelBuilder.Entity("MovieRentalApp.Models.User", b =>

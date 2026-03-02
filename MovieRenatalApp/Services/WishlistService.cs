@@ -2,20 +2,19 @@
 using MovieRentalApp.Interfaces;
 using MovieRentalApp.Models;
 using MovieRentalApp.Models.DTOs;
-using MovieRentalApp.Repositories;
 
 namespace MovieRentalApp.Services
 {
     public class WishlistService : IWishlistService
     {
-        private readonly WishlistRepository _wishlistRepository;
-        private readonly MovieRepository _movieRepository;
-        private readonly UserRepository _userRepository;
+        private readonly IRepository<int, Wishlist> _wishlistRepository;
+        private readonly IRepository<int, Movie> _movieRepository;
+        private readonly IRepository<int, User> _userRepository;
 
         public WishlistService(
-            WishlistRepository wishlistRepository,
-            MovieRepository movieRepository,
-            UserRepository userRepository)
+            IRepository<int, Wishlist> wishlistRepository,
+            IRepository<int, Movie> movieRepository,
+            IRepository<int, User> userRepository)
         {
             _wishlistRepository = wishlistRepository;
             _movieRepository = movieRepository;
@@ -24,60 +23,72 @@ namespace MovieRentalApp.Services
 
         public async Task<WishlistResponseDto> AddToWishlist(WishlistCreateDto dto)
         {
-            var user = await _userRepository.Get(dto.UserId);
+            // Step 1 - Validate user
+            var user = await _userRepository.GetByIdAsync(dto.UserId);
             if (user == null)
                 throw new EntityNotFoundException("User", dto.UserId);
 
-            var movie = await _movieRepository.Get(dto.MovieId);
+            // Step 2 - Validate movie
+            var movie = await _movieRepository.GetByIdAsync(dto.MovieId);
             if (movie == null)
                 throw new EntityNotFoundException("Movie", dto.MovieId);
 
-            if (await _wishlistRepository.ExistsAsync(dto.UserId, dto.MovieId))
+            // Step 3 - Check duplicate
+            var existing = await _wishlistRepository.FindAsync(
+                w => w.UserId == dto.UserId && w.MovieId == dto.MovieId);
+            if (existing.Any())
                 throw new DuplicateEntityException(
                     $"'{movie.Title}' is already in your wishlist.");
 
+            // Step 4 - Add
             var wishlist = new Wishlist
             {
                 UserId = dto.UserId,
                 MovieId = dto.MovieId,
-                AddedDate = DateTime.UtcNow    // ← trainer uses AddedDate
+                AddedDate = DateTime.UtcNow
             };
+            await _wishlistRepository.AddAsync(wishlist);
 
-            var created = await _wishlistRepository.Add(wishlist);
-            if (created == null)
-                throw new UnableToCreateEntityException("Wishlist item");
-
-            return MapToDto(created, movie);
+            return MapToDto(wishlist, movie);
         }
 
         public async Task<IEnumerable<WishlistResponseDto>> GetWishlistByUser(int userId)
         {
-            var user = await _userRepository.Get(userId);
-            if (user == null)
+            // Step 1 - Validate user
+            var userExists = await _userRepository.ExistsAsync(userId);
+            if (!userExists)
                 throw new EntityNotFoundException("User", userId);
 
-            var items = await _wishlistRepository.GetWishlistByUser(userId);
-            return items.Select(w => MapToDto(w, w.Movie!));
+            // Step 2 - Get wishlist with movie
+            var items = await _wishlistRepository.GetAllWithIncludeAsync(
+                w => w.Movie);
+
+            return items
+                .Where(w => w.UserId == userId)
+                .Select(w => MapToDto(w, w.Movie!));
         }
 
         public async Task<bool> RemoveFromWishlist(int wishlistId)
         {
-            var item = await _wishlistRepository.Get(wishlistId);
-            if (item == null)
+            // Step 1 - Check exists
+            var exists = await _wishlistRepository.ExistsAsync(wishlistId);
+            if (!exists)
                 throw new EntityNotFoundException("Wishlist item", wishlistId);
 
-            var deleted = await _wishlistRepository.Delete(wishlistId);
-            return deleted != null;
+            // Step 2 - Delete
+            return await _wishlistRepository.DeleteAsync(wishlistId);
         }
 
-        private static WishlistResponseDto MapToDto(Wishlist wishlist, Movie movie) => new()
-        {
-            Id = wishlist.Id,
-            UserId = wishlist.UserId,
-            MovieId = wishlist.MovieId,
-            MovieTitle = movie.Title,
-            RentalPrice = movie.RentalPrice,
-            AddedDate = wishlist.AddedDate   // ← trainer uses AddedDate
-        };
+        // ── Mapper ────────────────────────────────────────────────
+        private static WishlistResponseDto MapToDto(
+            Wishlist wishlist, Movie movie) => new()
+            {
+                Id = wishlist.Id,
+                UserId = wishlist.UserId,
+                MovieId = wishlist.MovieId,
+                MovieTitle = movie.Title,
+                RentalPrice = movie.RentalPrice,
+                AddedDate = wishlist.AddedDate
+            };
     }
 }

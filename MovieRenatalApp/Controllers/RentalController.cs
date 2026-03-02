@@ -8,7 +8,7 @@ namespace MovieRentalApp.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize]                               // ← All rental endpoints need login
+    [Authorize]
     public class RentalController : ControllerBase
     {
         private readonly IRentalService _rentalService;
@@ -19,9 +19,14 @@ namespace MovieRentalApp.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = "Customer,Admin")]
         public async Task<IActionResult> RentMovie([FromBody] RentalCreateDto dto)
         {
-            if (!ModelState.IsValid) return BadRequest(ModelState);
+            // Step 1 - Validate input
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            // Step 2 - Try to rent
             try
             {
                 var result = await _rentalService.RentMovie(dto);
@@ -34,8 +39,13 @@ namespace MovieRentalApp.Controllers
         }
 
         [HttpPut("{id}/return")]
+        [Authorize(Roles = "Customer,Admin")]
         public async Task<IActionResult> ReturnMovie(int id)
         {
+            // Step 1 - Validate id
+            if (id <= 0)
+                return BadRequest(new { message = "Invalid rental ID." });
+
             try
             {
                 var result = await _rentalService.ReturnMovie(id);
@@ -47,8 +57,13 @@ namespace MovieRentalApp.Controllers
         }
 
         [HttpGet("{id}")]
+        [Authorize(Roles = "Customer,Admin")]
         public async Task<IActionResult> GetRental(int id)
         {
+            // Step 1 - Validate id
+            if (id <= 0)
+                return BadRequest(new { message = "Invalid rental ID." });
+
             try
             {
                 var result = await _rentalService.GetRental(id);
@@ -59,11 +74,21 @@ namespace MovieRentalApp.Controllers
         }
 
         [HttpGet("user/{userId}")]
+        [Authorize(Roles = "Customer,Admin")]
         public async Task<IActionResult> GetRentalsByUser(int userId)
         {
+            // Step 1 - Validate userId
+            if (userId <= 0)
+                return BadRequest(new { message = "Invalid user ID." });
+
             try
             {
                 var result = await _rentalService.GetRentalsByUser(userId);
+
+                // Step 2 - Check if empty
+                if (result == null || !result.Any())
+                    return NotFound(new { message = "No rentals found for this user." });
+
                 return Ok(result);
             }
             catch (EntityNotFoundException ex) { return NotFound(new { message = ex.Message }); }
@@ -71,12 +96,16 @@ namespace MovieRentalApp.Controllers
         }
 
         [HttpGet("active")]
-        [Authorize(Roles = "Admin")]          // ← Only Admin sees all active rentals
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetActiveRentals()
         {
             try
             {
                 var result = await _rentalService.GetActiveRentals();
+
+                if (result == null || !result.Any())
+                    return NotFound(new { message = "No active rentals found." });
+
                 return Ok(result);
             }
             catch (Exception ex) { return StatusCode(500, new { message = ex.Message }); }

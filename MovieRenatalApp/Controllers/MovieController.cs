@@ -17,15 +17,21 @@ namespace MovieRentalApp.Controllers
             _movieService = movieService;
         }
 
-        // ── ADMIN ONLY ────────────────────────────────────────────
-        [HttpPost]
-        [Authorize(Roles = "Admin")]
+        // ── Admin + ContentManager ────────────────────────────────
+        [HttpPost("AddMovie")]
+        [Authorize(Roles = "Admin,ContentManager")]
         public async Task<IActionResult> AddMovie([FromBody] MovieCreateDto dto)
         {
-            if (!ModelState.IsValid) return BadRequest(ModelState);
+            // Step 1 - Validate input
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            // Step 2 - Try to add movie
             try
             {
                 var result = await _movieService.AddMovie(dto);
+
+                // Step 3 - Return success
                 return CreatedAtAction(nameof(GetMovie), new { id = result.Id }, result);
             }
             catch (UnableToCreateEntityException ex) { return StatusCode(500, new { message = ex.Message }); }
@@ -33,10 +39,18 @@ namespace MovieRentalApp.Controllers
         }
 
         [HttpPut("{id}")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,ContentManager")]
         public async Task<IActionResult> UpdateMovie(int id, [FromBody] MovieUpdateDto dto)
         {
-            if (!ModelState.IsValid) return BadRequest(ModelState);
+            // Step 1 - Validate input
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            // Step 2 - Validate id
+            if (id <= 0)
+                return BadRequest(new { message = "Invalid movie ID." });
+
+            // Step 3 - Try to update
             try
             {
                 var result = await _movieService.UpdateMovie(id, dto);
@@ -51,6 +65,11 @@ namespace MovieRentalApp.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteMovie(int id)
         {
+            // Step 1 - Validate id
+            if (id <= 0)
+                return BadRequest(new { message = "Invalid movie ID." });
+
+            // Step 2 - Try to delete
             try
             {
                 var result = await _movieService.DeleteMovie(id);
@@ -60,7 +79,7 @@ namespace MovieRentalApp.Controllers
             catch (Exception ex) { return StatusCode(500, new { message = ex.Message }); }
         }
 
-        // ── PUBLIC (Anyone can view) ───────────────────────────────
+        // ── Public ────────────────────────────────────────────────
         [HttpGet]
         [AllowAnonymous]
         public async Task<IActionResult> GetAllMovies()
@@ -68,6 +87,11 @@ namespace MovieRentalApp.Controllers
             try
             {
                 var result = await _movieService.GetAllMovies();
+
+                // Step 1 - Check if empty
+                if (result == null || !result.Any())
+                    return NotFound(new { message = "No movies found." });
+
                 return Ok(result);
             }
             catch (EntityNotFoundException ex) { return NotFound(new { message = ex.Message }); }
@@ -78,6 +102,10 @@ namespace MovieRentalApp.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> GetMovie(int id)
         {
+            // Step 1 - Validate id
+            if (id <= 0)
+                return BadRequest(new { message = "Invalid movie ID." });
+
             try
             {
                 var result = await _movieService.GetMovie(id);
@@ -91,9 +119,17 @@ namespace MovieRentalApp.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> SearchMovies([FromQuery] string keyword)
         {
+            // Step 1 - Validate keyword
+            if (string.IsNullOrWhiteSpace(keyword))
+                return BadRequest(new { message = "Search keyword cannot be empty." });
+
             try
             {
                 var result = await _movieService.SearchMovies(keyword);
+
+                if (result == null || !result.Any())
+                    return NotFound(new { message = $"No movies found for '{keyword}'." });
+
                 return Ok(result);
             }
             catch (Exception ex) { return StatusCode(500, new { message = ex.Message }); }
@@ -103,9 +139,17 @@ namespace MovieRentalApp.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> GetMoviesByGenre(int genreId)
         {
+            // Step 1 - Validate genreId
+            if (genreId <= 0)
+                return BadRequest(new { message = "Invalid genre ID." });
+
             try
             {
                 var result = await _movieService.GetMoviesByGenre(genreId);
+
+                if (result == null || !result.Any())
+                    return NotFound(new { message = "No movies found for this genre." });
+
                 return Ok(result);
             }
             catch (Exception ex) { return StatusCode(500, new { message = ex.Message }); }

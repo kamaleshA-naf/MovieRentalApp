@@ -2,6 +2,9 @@
 {
     public interface IPasswordService
     {
-        byte[] HashPassword(string password, byte[]? dbHashKey, out byte[]? hashkey);
+        byte[] HashPassword(
+            string password,
+            byte[]? dbHashKey,
+            out byte[]? hashkey);
     }
 }

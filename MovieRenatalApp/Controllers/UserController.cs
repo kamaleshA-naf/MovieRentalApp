@@ -19,10 +19,14 @@ namespace MovieRentalApp.Controllers
 
         // ── Public ────────────────────────────────────────────────
         [HttpPost("register")]
-        [AllowAnonymous]                      // ← Anyone can register
+        [AllowAnonymous]
         public async Task<IActionResult> Register([FromBody] UserCreateDto dto)
         {
-            if (!ModelState.IsValid) return BadRequest(ModelState);
+            // Step 1 - Validate input
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            // Step 2 - Try to register
             try
             {
                 var result = await _userService.Register(dto);
@@ -34,10 +38,14 @@ namespace MovieRentalApp.Controllers
         }
 
         [HttpPost("login")]
-        [AllowAnonymous]                      // ← Anyone can login
+        [AllowAnonymous]
         public async Task<IActionResult> Login([FromBody] LoginDto dto)
         {
-            if (!ModelState.IsValid) return BadRequest(ModelState);
+            // Step 1 - Validate input
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            // Step 2 - Try to login
             try
             {
                 var result = await _userService.Login(dto);
@@ -50,12 +58,17 @@ namespace MovieRentalApp.Controllers
 
         // ── Admin Only ────────────────────────────────────────────
         [HttpGet]
-        [Authorize(Roles = "Admin")]          // ← Only Admin sees all users
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetAllUsers()
         {
             try
             {
                 var result = await _userService.GetAllUsers();
+
+                // Step 1 - Check if empty
+                if (result == null || !result.Any())
+                    return NotFound(new { message = "No users found." });
+
                 return Ok(result);
             }
             catch (EntityNotFoundException ex) { return NotFound(new { message = ex.Message }); }
@@ -63,9 +76,13 @@ namespace MovieRentalApp.Controllers
         }
 
         [HttpDelete("{id}")]
-        [Authorize(Roles = "Admin")]          // ← Only Admin can delete users
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteUser(int id)
         {
+            // Step 1 - Validate id
+            if (id <= 0)
+                return BadRequest(new { message = "Invalid user ID." });
+
             try
             {
                 var result = await _userService.DeleteUser(id);
@@ -75,11 +92,15 @@ namespace MovieRentalApp.Controllers
             catch (Exception ex) { return StatusCode(500, new { message = ex.Message }); }
         }
 
-        // ── Logged In Users ───────────────────────────────────────
+        // ── Any Logged In User ────────────────────────────────────
         [HttpGet("{id}")]
-        [Authorize]                           // ← Any logged in user
+        [Authorize(Roles = "Admin, Customer")]
         public async Task<IActionResult> GetUser(int id)
         {
+            // Step 1 - Validate id
+            if (id <= 0)
+                return BadRequest(new { message = "Invalid user ID." });
+
             try
             {
                 var result = await _userService.GetUser(id);
@@ -90,10 +111,17 @@ namespace MovieRentalApp.Controllers
         }
 
         [HttpPut("{id}")]
-        [Authorize]                           // ← Any logged in user updates own profile
+        [Authorize]
         public async Task<IActionResult> UpdateUser(int id, [FromBody] UserUpdateDto dto)
         {
-            if (!ModelState.IsValid) return BadRequest(ModelState);
+            // Step 1 - Validate input
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            // Step 2 - Validate id
+            if (id <= 0)
+                return BadRequest(new { message = "Invalid user ID." });
+
             try
             {
                 var result = await _userService.UpdateUser(id, dto);

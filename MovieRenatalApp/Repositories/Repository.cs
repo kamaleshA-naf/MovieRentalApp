@@ -1,57 +1,85 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using MovieRentalApp.Contexts;
 using MovieRentalApp.Interfaces;
+using System.Linq.Expressions;
 
 namespace MovieRentalApp.Repositories
 {
-    public abstract class Repository<K, T> : IRepository<K, T> where T : class
+    public class Repository<K, T> : IRepository<K, T> where T : class
     {
         protected readonly MovieContext _context;
+        protected readonly DbSet<T> _dbSet;
 
-        protected Repository(MovieContext context)
+        public Repository(MovieContext context)
         {
             _context = context;
+            _dbSet = _context.Set<T>();
         }
 
-        // Each child class tells us HOW to find by key
-        protected abstract Task<T?> GetByKey(K key);
-
-        public async Task<T> Add(T item)
+        // GET ALL
+        public async Task<IEnumerable<T>> GetAllAsync()
         {
-            await _context.AddAsync(item);
+            return await _dbSet.ToListAsync();
+        }
+
+        // GET BY ID
+        public async Task<T?> GetByIdAsync(K id)
+        {
+            return await _dbSet.FindAsync(id);
+        }
+
+        // FIND (WHERE)
+        public async Task<IEnumerable<T>> FindAsync(
+            Expression<Func<T, bool>> predicate)
+        {
+            return await _dbSet.Where(predicate).ToListAsync();
+        }
+
+        // EXISTS
+        public async Task<bool> ExistsAsync(K id)
+        {
+            var entity = await _dbSet.FindAsync(id);
+            return entity != null;
+        }
+
+        // ADD
+        public async Task<T> AddAsync(T entity)
+        {
+            await _dbSet.AddAsync(entity);
             await _context.SaveChangesAsync();
-            return item;
+            return entity;
         }
 
-        public async Task<T?> Get(K key)
+        // UPDATE
+        public async Task<T?> UpdateAsync(K id, T entity)
         {
-            return await GetByKey(key);
-        }
+            var existing = await _dbSet.FindAsync(id);
+            if (existing == null) return null;
 
-        public async Task<IEnumerable<T>?> GetAll()
-        {
-            var items = await _context.Set<T>().ToListAsync();
-            return items.Any() ? items : null;
-        }
-
-        public async Task<T?> Update(K key, T item)
-        {
-            var existingItem = await GetByKey(key);
-            if (existingItem == null) return null;
-
-            _context.Entry(existingItem).CurrentValues.SetValues(item);
+            _context.Entry(existing).CurrentValues.SetValues(entity);
             await _context.SaveChangesAsync();
-            return existingItem;
+            return existing;
         }
 
-        public async Task<T?> Delete(K key)
+        // DELETE
+        public async Task<bool> DeleteAsync(K id)
         {
-            var item = await GetByKey(key);
-            if (item == null) return null;
+            var entity = await _dbSet.FindAsync(id);
+            if (entity == null) return false;
 
-            _context.Remove(item);
+            _dbSet.Remove(entity);
             await _context.SaveChangesAsync();
-            return item;
+            return true;
+        }
+
+        // GET ALL WITH INCLUDE
+        public async Task<IEnumerable<T>> GetAllWithIncludeAsync(
+            params Expression<Func<T, object>>[] includes)
+        {
+            IQueryable<T> query = _dbSet;
+            foreach (var include in includes)
+                query = query.Include(include);
+            return await query.ToListAsync();
         }
     }
 }

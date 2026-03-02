@@ -7,7 +7,7 @@ namespace MovieRentalApp.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize(Roles = "Admin")]        // ← Only Admin can access
+    [Authorize(Roles = "Admin")]
     public class AdminController : ControllerBase
     {
         private readonly IAdminService _adminService;
@@ -17,7 +17,6 @@ namespace MovieRentalApp.Controllers
             _adminService = adminService;
         }
 
-        // ── Dashboard ─────────────────────────────────────────────
         [HttpGet("dashboard")]
         public async Task<IActionResult> GetDashboardStats()
         {
@@ -29,76 +28,109 @@ namespace MovieRentalApp.Controllers
             catch (Exception ex) { return StatusCode(500, new { message = ex.Message }); }
         }
 
-        // ── Users + Their Rentals ─────────────────────────────────
         [HttpGet("users/rentals")]
         public async Task<IActionResult> GetAllUsersWithRentals()
         {
             try
             {
                 var result = await _adminService.GetAllUsersWithRentals();
+
+                if (result == null || !result.Any())
+                    return NotFound(new { message = "No users found." });
+
                 return Ok(result);
             }
             catch (EntityNotFoundException ex) { return NotFound(new { message = ex.Message }); }
             catch (Exception ex) { return StatusCode(500, new { message = ex.Message }); }
         }
 
-        // ── All Payments ──────────────────────────────────────────
         [HttpGet("payments")]
         public async Task<IActionResult> GetAllPayments()
         {
             try
             {
                 var result = await _adminService.GetAllPayments();
+
+                if (result.TotalPayments == 0)
+                    return NotFound(new { message = "No payments found." });
+
                 return Ok(result);
             }
             catch (Exception ex) { return StatusCode(500, new { message = ex.Message }); }
         }
 
-        // ── Payments By User ──────────────────────────────────────
         [HttpGet("payments/user/{userId}")]
         public async Task<IActionResult> GetPaymentsByUser(int userId)
         {
+            // Step 1 - Validate userId
+            if (userId <= 0)
+                return BadRequest(new { message = "Invalid user ID." });
+
             try
             {
                 var result = await _adminService.GetPaymentsByUser(userId);
+
+                if (result == null || !result.Any())
+                    return NotFound(new { message = "No payments found for this user." });
+
                 return Ok(result);
             }
             catch (EntityNotFoundException ex) { return NotFound(new { message = ex.Message }); }
             catch (Exception ex) { return StatusCode(500, new { message = ex.Message }); }
         }
 
-        // ── All Audit Logs ────────────────────────────────────────
         [HttpGet("logs")]
         public async Task<IActionResult> GetAllLogs()
         {
             try
             {
                 var result = await _adminService.GetAllLogs();
+
+                if (result == null || !result.Any())
+                    return NotFound(new { message = "No logs found." });
+
                 return Ok(result);
             }
             catch (Exception ex) { return StatusCode(500, new { message = ex.Message }); }
         }
 
-        // ── Logs By User ──────────────────────────────────────────
         [HttpGet("logs/user/{userId}")]
         public async Task<IActionResult> GetLogsByUser(int userId)
         {
+            // Step 1 - Validate userId
+            if (userId <= 0)
+                return BadRequest(new { message = "Invalid user ID." });
+
             try
             {
                 var result = await _adminService.GetLogsByUser(userId);
+
+                if (result == null || !result.Any())
+                    return NotFound(new { message = "No logs found for this user." });
+
                 return Ok(result);
             }
             catch (EntityNotFoundException ex) { return NotFound(new { message = ex.Message }); }
             catch (Exception ex) { return StatusCode(500, new { message = ex.Message }); }
         }
 
-        // ── Create Audit Log ──────────────────────────────────────
         [HttpPost("logs")]
         public async Task<IActionResult> CreateLog(
             [FromQuery] int userId,
             [FromQuery] string message,
             [FromQuery] string errorNumber)
         {
+            // Step 1 - Validate inputs
+            if (userId <= 0)
+                return BadRequest(new { message = "Invalid user ID." });
+
+            if (string.IsNullOrWhiteSpace(message))
+                return BadRequest(new { message = "Log message cannot be empty." });
+
+            if (string.IsNullOrWhiteSpace(errorNumber))
+                return BadRequest(new { message = "Error number cannot be empty." });
+
+            // Step 2 - Create log
             try
             {
                 var result = await _adminService.CreateLog(userId, message, errorNumber);
@@ -108,4 +140,4 @@ namespace MovieRentalApp.Controllers
             catch (Exception ex) { return StatusCode(500, new { message = ex.Message }); }
         }
     }
-}   
+}

@@ -35,7 +35,9 @@ namespace MovieRentalApp.Models
         public enum UserRole
         {
             Admin = 1,
-            Customer = 2
+            Customer = 2,
+            ContentManager = 3
+
         }
     
 }

@@ -1,11 +1,18 @@
-﻿namespace MovieRentalApp.Interfaces
+﻿using System.Linq.Expressions;
+
+namespace MovieRentalApp.Interfaces
 {
     public interface IRepository<K, T> where T : class
     {
-        Task<T> Add(T item);
-        Task<T?> Get(K key);
-        Task<IEnumerable<T>?> GetAll();
-        Task<T?> Update(K key, T item);
-        Task<T?> Delete(K key);
+        Task<T> AddAsync(T entity);
+        Task<T?> GetByIdAsync(K id);
+        Task<IEnumerable<T>> GetAllAsync();
+        Task<T?> UpdateAsync(K id, T entity);
+        Task<bool> DeleteAsync(K id);
+        Task<IEnumerable<T>> FindAsync(
+            Expression<Func<T, bool>> predicate);
+        Task<bool> ExistsAsync(K id);
+        Task<IEnumerable<T>> GetAllWithIncludeAsync(
+            params Expression<Func<T, object>>[] includes);
     }
 }

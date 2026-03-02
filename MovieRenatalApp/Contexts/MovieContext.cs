@@ -10,7 +10,7 @@ namespace MovieRentalApp.Contexts
         {
         }
 
-        public DbSet<Role> Roles { get; set; }
+        // ── DbSets ────────────────────────────────────────────────
         public DbSet<User> Users { get; set; }
         public DbSet<Movie> Movies { get; set; }
         public DbSet<Genre> Genres { get; set; }
@@ -19,6 +19,8 @@ namespace MovieRentalApp.Contexts
         public DbSet<Payment> Payments { get; set; }
         public DbSet<Wishlist> Wishlists { get; set; }
         public DbSet<AuditLog> AuditLogs { get; set; }
+        public DbSet<Notification> Notifications { get; set; }
+
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -40,10 +42,10 @@ namespace MovieRentalApp.Contexts
                 .HasForeignKey(mg => mg.GenreId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // ── User ──────────────────────────────────────────────
+            // ── User (Role stored as string enum) ─────────────────
             modelBuilder.Entity<User>()
                 .Property(u => u.Role)
-                .HasConversion<string>();
+                .HasConversion<string>(); // stores "Admin","Customer","ContentManager"
 
             // ── Rental ────────────────────────────────────────────
             modelBuilder.Entity<Rental>()
@@ -93,12 +95,17 @@ namespace MovieRentalApp.Contexts
 
             // ── AuditLog ──────────────────────────────────────────
             modelBuilder.Entity<AuditLog>()
-                .HasKey(a => a.LogId);          // ← ends here, no semicolon
+                .HasKey(a => a.LogId);
 
-            modelBuilder.Entity<AuditLog>()     // ← separate statement
+            modelBuilder.Entity<AuditLog>()
                 .HasOne(a => a.User)
                 .WithMany()
                 .HasForeignKey(a => a.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+            modelBuilder.Entity<Notification>()
+                .HasOne(n => n.User)
+                .WithMany()
+                .HasForeignKey(n => n.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
         }
     }

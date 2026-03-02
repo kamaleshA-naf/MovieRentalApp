@@ -8,7 +8,7 @@ namespace MovieRentalApp.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize]                               // ← All wishlist endpoints need login
+    [Authorize]
     public class WishlistController : ControllerBase
     {
         private readonly IWishlistService _wishlistService;
@@ -19,13 +19,18 @@ namespace MovieRentalApp.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = "Customer,Admin")]
         public async Task<IActionResult> AddToWishlist([FromBody] WishlistCreateDto dto)
         {
-            if (!ModelState.IsValid) return BadRequest(ModelState);
+            // Step 1 - Validate input
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
             try
             {
                 var result = await _wishlistService.AddToWishlist(dto);
-                return CreatedAtAction(nameof(GetWishlist), new { userId = result.UserId }, result);
+                return CreatedAtAction(nameof(GetWishlist),
+                    new { userId = result.UserId }, result);
             }
             catch (EntityNotFoundException ex) { return NotFound(new { message = ex.Message }); }
             catch (DuplicateEntityException ex) { return Conflict(new { message = ex.Message }); }
@@ -34,11 +39,21 @@ namespace MovieRentalApp.Controllers
         }
 
         [HttpGet("user/{userId}")]
+        [Authorize(Roles = "Customer,Admin")]
         public async Task<IActionResult> GetWishlist(int userId)
         {
+            // Step 1 - Validate userId
+            if (userId <= 0)
+                return BadRequest(new { message = "Invalid user ID." });
+
             try
             {
                 var result = await _wishlistService.GetWishlistByUser(userId);
+
+                // Step 2 - Check if empty
+                if (result == null || !result.Any())
+                    return NotFound(new { message = "Wishlist is empty for this user." });
+
                 return Ok(result);
             }
             catch (EntityNotFoundException ex) { return NotFound(new { message = ex.Message }); }
@@ -46,12 +61,17 @@ namespace MovieRentalApp.Controllers
         }
 
         [HttpDelete("{id}")]
+        [Authorize(Roles = "Customer,Admin")]
         public async Task<IActionResult> RemoveFromWishlist(int id)
         {
+            // Step 1 - Validate id
+            if (id <= 0)
+                return BadRequest(new { message = "Invalid wishlist item ID." });
+
             try
             {
                 await _wishlistService.RemoveFromWishlist(id);
-                return Ok(new { message = "Item removed from wishlist." });
+                return Ok(new { message = "Item removed from wishlist successfully." });
             }
             catch (EntityNotFoundException ex) { return NotFound(new { message = ex.Message }); }
             catch (Exception ex) { return StatusCode(500, new { message = ex.Message }); }

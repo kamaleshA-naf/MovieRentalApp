@@ -2,18 +2,17 @@
 using MovieRentalApp.Interfaces;
 using MovieRentalApp.Models;
 using MovieRentalApp.Models.DTOs;
-using MovieRentalApp.Repositories;
 
 namespace MovieRentalApp.Services
 {
     public class UserService : IUserService
     {
-        private readonly UserRepository _userRepository;
+        private readonly IRepository<int, User> _userRepository;
         private readonly ITokenService _tokenService;
         private readonly IPasswordService _passwordService;
 
         public UserService(
-            UserRepository userRepository,
+            IRepository<int, User> userRepository,
             ITokenService tokenService,
             IPasswordService passwordService)
         {
@@ -25,13 +24,18 @@ namespace MovieRentalApp.Services
         // ── Register ──────────────────────────────────────────────
         public async Task<UserResponseDto> Register(UserCreateDto dto)
         {
-            if (await _userRepository.EmailExists(dto.Email))
+            // Step 1 - Check duplicate email
+            var existing = await _userRepository
+                .FindAsync(u => u.UserEmail == dto.Email);
+            if (existing.Any())
                 throw new DuplicateEntityException(
                     $"A user with email '{dto.Email}' already exists.");
 
-            var hashedPassword = _passwordService.HashPassword(
-                dto.Password, null, out byte[]? hashkey);
+            // Step 2 - Hash password
+            var hashedPassword = _passwordService
+                .HashPassword(dto.Password, null, out byte[]? hashkey);
 
+            // Step 3 - Create user
             var user = new User
             {
                 UserName = dto.Name,
@@ -43,29 +47,33 @@ namespace MovieRentalApp.Services
                 CreatedAt = DateTime.UtcNow
             };
 
-            var created = await _userRepository.Add(user);
-            if (created == null)
-                throw new UnableToCreateEntityException("User");
-
+            // Step 4 - Save
+            var created = await _userRepository.AddAsync(user);
             return MapToDto(created);
         }
 
         // ── Login ─────────────────────────────────────────────────
         public async Task<LoginResponseDto> Login(LoginDto dto)
         {
-            var user = await _userRepository.GetByEmail(dto.Email);
+            // Step 1 - Find user by email
+            var users = await _userRepository
+                .FindAsync(u => u.UserEmail == dto.Email);
+            var user = users.FirstOrDefault();
             if (user == null)
                 throw new EntityNotFoundException("Invalid email or password.");
 
+            // Step 2 - Check if active
             if (!user.IsActive)
-                throw new UnauthorizedException("Your account has been deactivated.");
+                throw new UnauthorizedException(
+                    "Your account has been deactivated.");
 
-            var hashedPassword = _passwordService.HashPassword(
-                dto.Password, user.PasswordSaltValue, out _);
-
+            // Step 3 - Verify password
+            var hashedPassword = _passwordService
+                .HashPassword(dto.Password, user.PasswordSaltValue, out _);
             if (!hashedPassword.SequenceEqual(user.Password))
                 throw new UnauthorizedException("Invalid email or password.");
 
+            // Step 4 - Generate token
             var token = _tokenService.CreateToken(new TokenPayloadDto
             {
                 UserId = user.UserId,
@@ -83,10 +91,11 @@ namespace MovieRentalApp.Services
             };
         }
 
-        // ── Get Single User ───────────────────────────────────────
+        // ── Get User ──────────────────────────────────────────────
         public async Task<UserResponseDto> GetUser(int id)
         {
-            var user = await _userRepository.Get(id);
+            // Step 1 - Find user
+            var user = await _userRepository.GetByIdAsync(id);
             if (user == null)
                 throw new EntityNotFoundException("User", id);
 
@@ -96,8 +105,9 @@ namespace MovieRentalApp.Services
         // ── Get All Users ─────────────────────────────────────────
         public async Task<IEnumerable<UserResponseDto>> GetAllUsers()
         {
-            var users = await _userRepository.GetAll();
-            if (users == null || !users.Any())
+            // Step 1 - Get all
+            var users = await _userRepository.GetAllAsync();
+            if (!users.Any())
                 throw new EntityNotFoundException("No users found.");
 
             return users.Select(MapToDto);
@@ -106,21 +116,29 @@ namespace MovieRentalApp.Services
         // ── Update User ───────────────────────────────────────────
         public async Task<UserResponseDto> UpdateUser(int id, UserUpdateDto dto)
         {
-            var existing = await _userRepository.Get(id);
-            if (existing == null)
+            // Step 1 - Find user
+            var user = await _userRepository.GetByIdAsync(id);
+            if (user == null)
                 throw new EntityNotFoundException("User", id);
 
-            if (dto.Email != null && dto.Email != existing.UserEmail)
-            {
-                if (await _userRepository.EmailExists(dto.Email))
-                    throw new DuplicateEntityException(
-                        $"Email '{dto.Email}' is already taken.");
-                existing.UserEmail = dto.Email;
-            }
+            // Step 2 - Check email uniqueness
+            //if (dto.Email != null && dto.Email != user.UserEmail)
+            //{
+            //    var emailExists = await _userRepository
+            //        .FindAsync(u => u.UserEmail == dto.Email);
+            //    if (emailExists.Any())
+            //        throw new DuplicateEntityException(
+            //            $"Email '{dto.Email}' is already taken.");
 
-            if (dto.Name != null) existing.UserName = dto.Name;
+            //    user.UserEmail = dto.Email;
+            //}
 
-            var updated = await _userRepository.Update(id, existing);
+            // Step 3 - Update name
+            if (dto.Name != null)
+                user.UserName = dto.Name;
+
+            // Step 4 - Save
+            var updated = await _userRepository.UpdateAsync(id, user);
             if (updated == null)
                 throw new UnableToCreateEntityException("User", "Update failed.");
 
@@ -130,20 +148,22 @@ namespace MovieRentalApp.Services
         // ── Delete User ───────────────────────────────────────────
         public async Task<UserResponseDto> DeleteUser(int id)
         {
-            var user = await _userRepository.Get(id);
+            // Step 1 - Find user
+            var user = await _userRepository.GetByIdAsync(id);
             if (user == null)
                 throw new EntityNotFoundException("User", id);
 
-            var deleted = await _userRepository.Delete(id);
-            return MapToDto(deleted!);
+            // Step 2 - Delete
+            await _userRepository.DeleteAsync(id);
+            return MapToDto(user);
         }
 
         // ── Mapper ────────────────────────────────────────────────
         private static UserResponseDto MapToDto(User user) => new()
         {
-            Id = user.UserId,       // ← UserId
-            Name = user.UserName,     // ← UserName
-            Email = user.UserEmail,    // ← UserEmail
+            Id = user.UserId,
+            Name = user.UserName,
+            Email = user.UserEmail,
             Role = user.Role.ToString(),
             IsActive = user.IsActive,
             CreatedAt = user.CreatedAt

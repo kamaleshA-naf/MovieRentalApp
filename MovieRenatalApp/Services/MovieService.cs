@@ -2,21 +2,28 @@
 using MovieRentalApp.Interfaces;
 using MovieRentalApp.Models;
 using MovieRentalApp.Models.DTOs;
-using MovieRentalApp.Repositories;
 
 namespace MovieRentalApp.Services
 {
     public class MovieService : IMovieService
     {
-        private readonly MovieRepository _movieRepository;
+        private readonly IRepository<int, Movie> _movieRepository;
+        private readonly IRepository<int, MovieGenre> _movieGenreRepository;
+        private readonly IRepository<int, Genre> _genreRepository;
 
-        public MovieService(MovieRepository movieRepository)
+        public MovieService(
+            IRepository<int, Movie> movieRepository,
+            IRepository<int, MovieGenre> movieGenreRepository,
+            IRepository<int, Genre> genreRepository)
         {
             _movieRepository = movieRepository;
+            _movieGenreRepository = movieGenreRepository;
+            _genreRepository = genreRepository;
         }
 
         public async Task<MovieResponseDto> AddMovie(MovieCreateDto dto)
         {
+            // Step 1 - Create movie
             var movie = new Movie
             {
                 Title = dto.Title,
@@ -27,80 +34,115 @@ namespace MovieRentalApp.Services
                 ReleaseYear = dto.ReleaseYear
             };
 
-            var created = await _movieRepository.Add(movie);
-            if (created == null)
-                throw new UnableToCreateEntityException("Movie");
+            // Step 2 - Save movie
+            var created = await _movieRepository.AddAsync(movie);
 
-            return MapToDto(created);
+            // Step 3 - Add genres
+            if (dto.GenreIds != null && dto.GenreIds.Any())
+            {
+                foreach (var genreId in dto.GenreIds)
+                {
+                    await _movieGenreRepository.AddAsync(new MovieGenre
+                    {
+                        MovieId = created.Id,
+                        GenreId = genreId
+                    });
+                }
+            }
+
+            return await BuildMovieDto(created.Id);
         }
 
         public async Task<MovieResponseDto> GetMovie(int id)
         {
-            var movie = await _movieRepository.Get(id);
+            // Step 1 - Check exists
+            var movie = await _movieRepository.GetByIdAsync(id);
             if (movie == null)
                 throw new EntityNotFoundException("Movie", id);
 
-            return MapToDto(movie);
+            return await BuildMovieDto(id);
         }
 
         public async Task<IEnumerable<MovieResponseDto>> GetAllMovies()
         {
-            var movies = await _movieRepository.GetAll();
-            if (movies == null || !movies.Any())
-                throw new EntityNotFoundException("No movies found in the system.");
+            // Step 1 - Get all with genres
+            var movies = await _movieRepository.GetAllWithIncludeAsync(
+                m => m.MovieGenres);
 
-            return movies.Select(MapToDto);
+            if (!movies.Any())
+                throw new EntityNotFoundException("No movies found.");
+
+            return movies.Select(MapMovieToDto);
         }
 
         public async Task<MovieResponseDto> UpdateMovie(int id, MovieUpdateDto dto)
         {
-            var existing = await _movieRepository.Get(id);
-            if (existing == null)
+            // Step 1 - Find movie
+            var movie = await _movieRepository.GetByIdAsync(id);
+            if (movie == null)
                 throw new EntityNotFoundException("Movie", id);
 
-            if (dto.Title != null) existing.Title = dto.Title;
-            if (dto.Description != null) existing.Description = dto.Description;
-            if (dto.RentalPrice.HasValue) existing.RentalPrice = dto.RentalPrice.Value;
-            if (dto.AvailableCopies.HasValue) existing.AvailableCopies = dto.AvailableCopies.Value;
-            if (dto.Director != null) existing.Director = dto.Director;
-            if (dto.ReleaseYear.HasValue) existing.ReleaseYear = dto.ReleaseYear;
+            // Step 2 - Update fields
+            if (dto.Title != null) movie.Title = dto.Title;
+            if (dto.Description != null) movie.Description = dto.Description;
+            if (dto.RentalPrice != null) movie.RentalPrice = dto.RentalPrice.Value;
+            if (dto.AvailableCopies != null) movie.AvailableCopies = dto.AvailableCopies.Value;
+            if (dto.Director != null) movie.Director = dto.Director;
+            if (dto.ReleaseYear != null) movie.ReleaseYear = dto.ReleaseYear;
 
-            var updated = await _movieRepository.Update(id, existing);
-            if (updated == null)
-                throw new UnableToCreateEntityException("Movie", "Update failed.");
-
-            return MapToDto(updated);
+            // Step 3 - Save
+            await _movieRepository.UpdateAsync(id, movie);
+            return await BuildMovieDto(id);
         }
 
         public async Task<MovieResponseDto> DeleteMovie(int id)
         {
-            var movie = await _movieRepository.Get(id);
+            // Step 1 - Find movie
+            var movie = await _movieRepository.GetByIdAsync(id);
             if (movie == null)
                 throw new EntityNotFoundException("Movie", id);
 
-            var deleted = await _movieRepository.Delete(id);
-            return MapToDto(deleted!);
+            var dto = MapMovieToDto(movie);
+
+            // Step 2 - Delete
+            await _movieRepository.DeleteAsync(id);
+            return dto;
         }
 
         public async Task<IEnumerable<MovieResponseDto>> SearchMovies(string keyword)
         {
-            if (string.IsNullOrWhiteSpace(keyword))
-                throw new BusinessRuleViolationException("Search keyword cannot be empty.");
-
-            var movies = await _movieRepository.SearchMovies(keyword);
-            return movies.Select(MapToDto);
+            // Step 1 - Search by title or description
+            var movies = await _movieRepository
+                .FindAsync(m => m.Title.Contains(keyword) ||
+                                m.Description.Contains(keyword));
+            return movies.Select(MapMovieToDto);
         }
 
         public async Task<IEnumerable<MovieResponseDto>> GetMoviesByGenre(int genreId)
         {
-            var movies = await _movieRepository.GetMoviesByGenre(genreId);
-            if (!movies.Any())
-                throw new EntityNotFoundException($"No movies found for genre ID {genreId}.");
+            // Step 1 - Find movie genres
+            var movieGenres = await _movieGenreRepository
+                .FindAsync(mg => mg.GenreId == genreId);
 
-            return movies.Select(MapToDto);
+            var movieIds = movieGenres.Select(mg => mg.MovieId).ToList();
+
+            // Step 2 - Get movies
+            var movies = await _movieRepository
+                .FindAsync(m => movieIds.Contains(m.Id));
+
+            return movies.Select(MapMovieToDto);
         }
 
-        private static MovieResponseDto MapToDto(Movie movie) => new()
+        // ── Helpers ───────────────────────────────────────────────
+        private async Task<MovieResponseDto> BuildMovieDto(int movieId)
+        {
+            var movies = await _movieRepository
+                .GetAllWithIncludeAsync(m => m.MovieGenres);
+            var movie = movies.FirstOrDefault(m => m.Id == movieId);
+            return MapMovieToDto(movie!);
+        }
+
+        private static MovieResponseDto MapMovieToDto(Movie movie) => new()
         {
             Id = movie.Id,
             Title = movie.Title,
@@ -111,8 +153,7 @@ namespace MovieRentalApp.Services
             ReleaseYear = movie.ReleaseYear,
             Genres = movie.MovieGenres?
                                 .Select(mg => mg.Genre?.Name ?? "")
-                                .Where(n => n != "")
-                                .ToList() ?? new()
+                                .ToList() ?? new List<string>()
         };
     }
 }

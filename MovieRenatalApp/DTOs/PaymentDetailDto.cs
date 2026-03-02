@@ -1,6 +1,6 @@
 ﻿namespace MovieRentalApp.Models.DTOs
 {
-    public class PaymentResponseDto
+    public class PaymentDetailDto
     {
         public int Id { get; set; }
         public int UserId { get; set; }
