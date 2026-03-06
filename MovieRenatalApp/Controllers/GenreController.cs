@@ -39,7 +39,7 @@ namespace MovieRentalApp.Controllers
         public async Task<IActionResult> AddGenre(
             [FromBody] GenreCreateDto dto)
         {
-            // Step 1 - Validate input
+           
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
@@ -55,11 +55,11 @@ namespace MovieRentalApp.Controllers
         }
 
         
-        [HttpDelete("{id}")]   // ✅ This was missing - caused the error
+        [HttpDelete("{id}")]   
         [Authorize(Roles = "Admin,ContentManager")]
         public async Task<IActionResult> DeleteGenre(int id)
         {
-            // Step 1 - Validate id
+            
             if (id <= 0)
                 return BadRequest(
                     new { message = "Invalid genre ID." });
