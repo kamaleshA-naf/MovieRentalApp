@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MovieRentalApp.Exceptions;
 using MovieRentalApp.Interfaces;
@@ -17,6 +17,7 @@ namespace MovieRentalApp.Controllers
             _genreService = genreService;
         }
 
+        
         [HttpGet]
         [AllowAnonymous]
         public async Task<IActionResult> GetAllGenres()
@@ -26,16 +27,19 @@ namespace MovieRentalApp.Controllers
                 var result = await _genreService.GetAllGenres();
                 return Ok(result);
             }
-            catch (EntityNotFoundException ex) { return NotFound(new { message = ex.Message }); }
-            catch (Exception ex) { return StatusCode(500, new { message = ex.Message }); }
+            catch (EntityNotFoundException ex)
+            { return NotFound(new { message = ex.Message }); }
+            catch (Exception ex)
+            { return StatusCode(500, new { message = ex.Message }); }
         }
 
         
         [HttpPost]
         [Authorize(Roles = "Admin,ContentManager")]
-        public async Task<IActionResult> AddGenre([FromBody] GenreCreateDto dto)
+        public async Task<IActionResult> AddGenre(
+            [FromBody] GenreCreateDto dto)
         {
-            
+            // Step 1 - Validate input
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
@@ -44,25 +48,31 @@ namespace MovieRentalApp.Controllers
                 var result = await _genreService.AddGenre(dto);
                 return CreatedAtAction(nameof(GetAllGenres), result);
             }
-            catch (DuplicateEntityException ex) { return Conflict(new { message = ex.Message }); }
-            catch (Exception ex) { return StatusCode(500, new { message = ex.Message }); }
+            catch (DuplicateEntityException ex)
+            { return Conflict(new { message = ex.Message }); }
+            catch (Exception ex)
+            { return StatusCode(500, new { message = ex.Message }); }
         }
 
         
+        [HttpDelete("{id}")]   // ✅ This was missing - caused the error
         [Authorize(Roles = "Admin,ContentManager")]
         public async Task<IActionResult> DeleteGenre(int id)
         {
-            
+            // Step 1 - Validate id
             if (id <= 0)
-                return BadRequest(new { message = "Invalid genre ID." });
+                return BadRequest(
+                    new { message = "Invalid genre ID." });
 
             try
             {
                 var result = await _genreService.DeleteGenre(id);
                 return Ok(new { message = "Genre deleted.", data = result });
             }
-            catch (EntityNotFoundException ex) { return NotFound(new { message = ex.Message }); }
-            catch (Exception ex) { return StatusCode(500, new { message = ex.Message }); }
+            catch (EntityNotFoundException ex)
+            { return NotFound(new { message = ex.Message }); }
+            catch (Exception ex)
+            { return StatusCode(500, new { message = ex.Message }); }
         }
     }
 }
