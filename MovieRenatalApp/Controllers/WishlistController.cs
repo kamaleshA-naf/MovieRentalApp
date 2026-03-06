@@ -61,7 +61,7 @@ namespace MovieRentalApp.Controllers
         }
 
         [HttpDelete("{id}")]
-        [Authorize(Roles = "Customer,Admin")]
+        [Authorize(Roles = "Customer")]
         public async Task<IActionResult> RemoveFromWishlist(int id)
         {
             // Step 1 - Validate id

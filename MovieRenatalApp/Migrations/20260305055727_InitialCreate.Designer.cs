@@ -12,7 +12,7 @@ using MovieRentalApp.Contexts;
 namespace MovieRentalApp.Migrations
 {
     [DbContext(typeof(MovieContext))]
-    [Migration("20260301115029_initialcreate")]
+    [Migration("20260305055727_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -87,20 +87,18 @@ namespace MovieRentalApp.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int>("AvailableCopies")
-                        .HasColumnType("int");
-
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Director")
-                        .HasColumnType("nvarchar(max)");
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<double>("Rating")
                         .HasColumnType("float");
 
-                    b.Property<int?>("ReleaseYear")
+                    b.Property<int>("ReleaseYear")
                         .HasColumnType("int");
 
                     b.Property<decimal>("RentalPrice")
@@ -108,9 +106,21 @@ namespace MovieRentalApp.Migrations
 
                     b.Property<string>("Title")
                         .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("VideoUrl")
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Director")
+                        .HasDatabaseName("IX_Movie_Director");
+
+                    b.HasIndex("ReleaseYear")
+                        .HasDatabaseName("IX_Movie_ReleaseYear");
+
+                    b.HasIndex("Title")
+                        .HasDatabaseName("IX_Movie_Title");
 
                     b.ToTable("Movies");
                 });
@@ -125,7 +135,11 @@ namespace MovieRentalApp.Migrations
 
                     b.HasKey("MovieId", "GenreId");
 
-                    b.HasIndex("GenreId");
+                    b.HasIndex("GenreId")
+                        .HasDatabaseName("IX_MovieGenre_GenreId");
+
+                    b.HasIndex("MovieId")
+                        .HasDatabaseName("IX_MovieGenre_MovieId");
 
                     b.ToTable("MovieGenres");
                 });
@@ -183,6 +197,9 @@ namespace MovieRentalApp.Migrations
 
                     b.Property<DateTime>("PaymentDate")
                         .HasColumnType("datetime2");
+
+                    b.Property<int>("RentalId")
+                        .HasColumnType("int");
 
                     b.Property<string>("Status")
                         .IsRequired()

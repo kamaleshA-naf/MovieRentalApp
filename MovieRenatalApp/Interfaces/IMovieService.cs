@@ -6,10 +6,10 @@ namespace MovieRentalApp.Interfaces
     {
         Task<MovieResponseDto> AddMovie(MovieCreateDto dto);
         Task<MovieResponseDto> GetMovie(int id);
-        Task<IEnumerable<MovieResponseDto>> GetAllMovies();
+        Task<PagedResultDto<MovieResponseDto>> GetAllMovies(PaginationDto pagination);
+        Task<PagedResultDto<MovieResponseDto>> SearchMovies(string keyword, PaginationDto pagination);
+        Task<PagedResultDto<MovieResponseDto>> GetMoviesByGenre(int genreId, PaginationDto pagination);
         Task<MovieResponseDto> UpdateMovie(int id, MovieUpdateDto dto);
         Task<MovieResponseDto> DeleteMovie(int id);
-        Task<IEnumerable<MovieResponseDto>> SearchMovies(string keyword);
-        Task<IEnumerable<MovieResponseDto>> GetMoviesByGenre(int genreId);
     }
 }

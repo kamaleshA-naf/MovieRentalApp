@@ -36,12 +36,7 @@ namespace MovieRentalApp.Services
             if (movie == null)
                 throw new EntityNotFoundException("Movie", dto.MovieId);
 
-            // Step 3 - Check availability
-            if (movie.AvailableCopies <= 0)
-                throw new BusinessRuleViolationException(
-                    $"'{movie.Title}' is not available for rent.");
-
-            // Step 4 - Check duplicate active rental
+            // Step 3 - Check duplicate active rental
             var existing = await _rentalRepository.FindAsync(
                 r => r.UserId == dto.UserId &&
                      r.MovieId == dto.MovieId &&
@@ -50,7 +45,7 @@ namespace MovieRentalApp.Services
                 throw new BusinessRuleViolationException(
                     $"You already have '{movie.Title}' rented.");
 
-            // Step 5 - Create rental
+            // Step 4 - Create rental
             var rental = new Rental
             {
                 UserId = dto.UserId,
@@ -61,14 +56,11 @@ namespace MovieRentalApp.Services
             };
             await _rentalRepository.AddAsync(rental);
 
-            // Step 6 - Reduce available copies
-            movie.AvailableCopies--;
-            await _movieRepository.UpdateAsync(movie.Id, movie);
-
-            // Step 7 - Auto create payment
+            // Step 5 - ✅ Auto payment linked to rental
             await _paymentRepository.AddAsync(new Payment
             {
                 UserId = dto.UserId,
+                RentalId = rental.Id,
                 Amount = movie.RentalPrice * dto.DurationDays,
                 Method = "Online",
                 Status = "Completed",
@@ -80,38 +72,26 @@ namespace MovieRentalApp.Services
 
         public async Task<RentalResponseDto> ReturnMovie(int rentalId)
         {
-            // Step 1 - Find rental with includes
-            var rentals = await _rentalRepository.GetAllWithIncludeAsync(
-                r => r.Movie, r => r.User);
+            var rentals = await _rentalRepository
+                .GetAllWithIncludeAsync(r => r.Movie, r => r.User);
             var rental = rentals.FirstOrDefault(r => r.Id == rentalId);
             if (rental == null)
                 throw new EntityNotFoundException("Rental", rentalId);
 
-            // Step 2 - Check already returned
             if (rental.Status == "Returned")
                 throw new BusinessRuleViolationException(
                     "This rental has already been returned.");
 
-            // Step 3 - Update status
             rental.Status = "Returned";
             await _rentalRepository.UpdateAsync(rentalId, rental);
-
-            // Step 4 - Restore movie copy
-            var movie = await _movieRepository.GetByIdAsync(rental.MovieId);
-            if (movie != null)
-            {
-                movie.AvailableCopies++;
-                await _movieRepository.UpdateAsync(movie.Id, movie);
-            }
 
             return MapToDto(rental, rental.Movie!, rental.User!);
         }
 
         public async Task<RentalResponseDto> GetRental(int id)
         {
-            // Step 1 - Find with includes
-            var rentals = await _rentalRepository.GetAllWithIncludeAsync(
-                r => r.Movie, r => r.User);
+            var rentals = await _rentalRepository
+                .GetAllWithIncludeAsync(r => r.Movie, r => r.User);
             var rental = rentals.FirstOrDefault(r => r.Id == id);
             if (rental == null)
                 throw new EntityNotFoundException("Rental", id);
@@ -119,11 +99,11 @@ namespace MovieRentalApp.Services
             return MapToDto(rental, rental.Movie!, rental.User!);
         }
 
-        public async Task<IEnumerable<RentalResponseDto>> GetRentalsByUser(int userId)
+        public async Task<IEnumerable<RentalResponseDto>> GetRentalsByUser(
+            int userId)
         {
-            // Step 1 - Get rentals with includes
-            var rentals = await _rentalRepository.GetAllWithIncludeAsync(
-                r => r.Movie, r => r.User);
+            var rentals = await _rentalRepository
+                .GetAllWithIncludeAsync(r => r.Movie, r => r.User);
 
             return rentals
                 .Where(r => r.UserId == userId)
@@ -133,16 +113,14 @@ namespace MovieRentalApp.Services
 
         public async Task<IEnumerable<RentalResponseDto>> GetActiveRentals()
         {
-            // Step 1 - Get active rentals
-            var rentals = await _rentalRepository.GetAllWithIncludeAsync(
-                r => r.Movie, r => r.User);
+            var rentals = await _rentalRepository
+                .GetAllWithIncludeAsync(r => r.Movie, r => r.User);
 
             return rentals
                 .Where(r => r.Status == "Active")
                 .Select(r => MapToDto(r, r.Movie!, r.User!));
         }
 
-        // ── Mapper ────────────────────────────────────────────────
         private static RentalResponseDto MapToDto(
             Rental rental, Movie movie, User user) => new()
             {

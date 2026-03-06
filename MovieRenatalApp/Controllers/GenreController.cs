@@ -51,7 +51,7 @@ namespace MovieRentalApp.Controllers
 
         // ── Admin Only ────────────────────────────────────────────
         [HttpDelete("{id}")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,ContentManager")]
         public async Task<IActionResult> DeleteGenre(int id)
         {
             // Step 1 - Validate id

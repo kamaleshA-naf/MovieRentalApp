@@ -6,9 +6,14 @@
         public string Title { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
         public decimal RentalPrice { get; set; }
-        public int AvailableCopies { get; set; }
-        public string? Director { get; set; }
-        public int? ReleaseYear { get; set; }
-        public List<string> Genres { get; set; } = new();
+        public string Director { get; set; } = string.Empty;
+        public int ReleaseYear { get; set; }
+        public double Rating { get; set; }
+
+        // ✅ Returns video URL to client
+        public string? VideoUrl { get; set; }
+
+        public List<GenreResponseDto> Genres { get; set; }
+            = new List<GenreResponseDto>();
     }
 }

@@ -11,148 +11,299 @@ namespace MovieRentalApp.Controllers
     public class MovieController : ControllerBase
     {
         private readonly IMovieService _movieService;
+        private readonly IWebHostEnvironment _env;
 
-        public MovieController(IMovieService movieService)
+        public MovieController(
+            IMovieService movieService,
+            IWebHostEnvironment env)
         {
             _movieService = movieService;
+            _env = env;
         }
 
-        // ── Admin + ContentManager ────────────────────────────────
+        // ── Add Movie - Admin + ContentManager ────────────────────
         [HttpPost("AddMovie")]
         [Authorize(Roles = "Admin,ContentManager")]
-        public async Task<IActionResult> AddMovie([FromBody] MovieCreateDto dto)
+        public async Task<IActionResult> AddMovie(
+            [FromBody] MovieCreateDto dto)
         {
-            // Step 1 - Validate input
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            // Step 2 - Try to add movie
             try
             {
                 var result = await _movieService.AddMovie(dto);
-
-                // Step 3 - Return success
-                return CreatedAtAction(nameof(GetMovie), new { id = result.Id }, result);
+                return CreatedAtAction(
+                    nameof(GetMovie),
+                    new { id = result.Id }, result);
             }
-            catch (UnableToCreateEntityException ex) { return StatusCode(500, new { message = ex.Message }); }
-            catch (Exception ex) { return StatusCode(500, new { message = ex.Message }); }
+            catch (BusinessRuleViolationException ex)
+            { return BadRequest(new { message = ex.Message }); }
+            catch (Exception ex)
+            { return StatusCode(500, new { message = ex.Message }); }
         }
 
-        [HttpPut("{id}")]
+        // ── Upload Movie Video - Admin + ContentManager only ──────
+        // Route  : POST /api/Movie/upload-video
+        // Body   : multipart/form-data → File + MovieId
+        // Returns: videoUrl saved to movie record
+        [HttpPost("upload-video")]
         [Authorize(Roles = "Admin,ContentManager")]
-        public async Task<IActionResult> UpdateMovie(int id, [FromBody] MovieUpdateDto dto)
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> UploadMovieVideo(
+            [FromForm] VideoUploadRequest request)
         {
-            // Step 1 - Validate input
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
+            // Step 1 - Validate file exists
+            if (request.File == null || request.File.Length == 0)
+                return BadRequest(
+                    new { message = "No file uploaded." });
 
-            // Step 2 - Validate id
-            if (id <= 0)
-                return BadRequest(new { message = "Invalid movie ID." });
+            // Step 2 - Validate file type (video only)
+            var allowedTypes = new[]
+            {
+                "video/mp4", "video/avi",
+                "video/x-matroska", "video/webm"
+            };
+            if (!allowedTypes.Contains(
+                    request.File.ContentType.ToLower()))
+                return BadRequest(new
+                {
+                    message = "Invalid file type. " +
+                              "Allowed: mp4, avi, mkv, webm."
+                });
 
-            // Step 3 - Try to update
+            // Step 3 - Validate file size (max 500MB)
+            const long maxSize = 500L * 1024 * 1024;
+            if (request.File.Length > maxSize)
+                return BadRequest(new
+                {
+                    message = "File too large. Maximum size is 500MB."
+                });
+
+            // Step 4 - Validate movieId
+            if (request.MovieId <= 0)
+                return BadRequest(
+                    new { message = "Invalid movie ID." });
+
             try
             {
-                var result = await _movieService.UpdateMovie(id, dto);
-                return Ok(result);
+                // Step 5 - Check movie exists first
+                var movie = await _movieService
+                    .GetMovie(request.MovieId);
+
+                // Step 6 - Create upload folder if not exists
+                var uploadFolder = Path.Combine(
+                    _env.WebRootPath ?? "wwwroot",
+                    "uploads", "movies");
+                Directory.CreateDirectory(uploadFolder);
+
+                // Step 7 - Generate unique filename
+                var ext = Path.GetExtension(
+                    request.File.FileName).ToLower();
+                var fileName = $"movie_{request.MovieId}_" +
+                               $"{Guid.NewGuid()}{ext}";
+                var filePath = Path.Combine(uploadFolder, fileName);
+
+                // Step 8 - Save video file to disk
+                using (var stream = new FileStream(
+                    filePath, FileMode.Create))
+                {
+                    await request.File.CopyToAsync(stream);
+                }
+
+                // Step 9 - Build public URL
+                var videoUrl = $"/uploads/movies/{fileName}";
+
+                // Step 10 - Update movie with new VideoUrl
+                var updateDto = new MovieUpdateDto
+                {
+                    Title = movie.Title,
+                    Description = movie.Description,
+                    RentalPrice = movie.RentalPrice,
+                    Director = movie.Director,
+                    ReleaseYear = movie.ReleaseYear,
+                    Rating = movie.Rating,
+                    VideoUrl = videoUrl
+                };
+                await _movieService.UpdateMovie(
+                    request.MovieId, updateDto);
+
+                // Step 11 - Return success with URL
+                return Ok(new
+                {
+                    message = "Video uploaded successfully.",
+                    movieId = request.MovieId,
+                    videoUrl = videoUrl
+                });
             }
-            catch (EntityNotFoundException ex) { return NotFound(new { message = ex.Message }); }
-            catch (UnableToCreateEntityException ex) { return StatusCode(500, new { message = ex.Message }); }
-            catch (Exception ex) { return StatusCode(500, new { message = ex.Message }); }
+            catch (EntityNotFoundException ex)
+            { return NotFound(new { message = ex.Message }); }
+            catch (Exception ex)
+            { return StatusCode(500, new { message = ex.Message }); }
         }
 
-        [HttpDelete("{id}")]
-        [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> DeleteMovie(int id)
-        {
-            // Step 1 - Validate id
-            if (id <= 0)
-                return BadRequest(new { message = "Invalid movie ID." });
-
-            // Step 2 - Try to delete
-            try
-            {
-                var result = await _movieService.DeleteMovie(id);
-                return Ok(new { message = "Movie deleted successfully.", data = result });
-            }
-            catch (EntityNotFoundException ex) { return NotFound(new { message = ex.Message }); }
-            catch (Exception ex) { return StatusCode(500, new { message = ex.Message }); }
-        }
-
-        // ── Public ────────────────────────────────────────────────
-        [HttpGet]
-        [AllowAnonymous]
-        public async Task<IActionResult> GetAllMovies()
-        {
-            try
-            {
-                var result = await _movieService.GetAllMovies();
-
-                // Step 1 - Check if empty
-                if (result == null || !result.Any())
-                    return NotFound(new { message = "No movies found." });
-
-                return Ok(result);
-            }
-            catch (EntityNotFoundException ex) { return NotFound(new { message = ex.Message }); }
-            catch (Exception ex) { return StatusCode(500, new { message = ex.Message }); }
-        }
-
+        // ── Get Single Movie - Public ─────────────────────────────
         [HttpGet("{id}")]
         [AllowAnonymous]
         public async Task<IActionResult> GetMovie(int id)
         {
-            // Step 1 - Validate id
             if (id <= 0)
-                return BadRequest(new { message = "Invalid movie ID." });
+                return BadRequest(
+                    new { message = "Invalid movie ID." });
 
             try
             {
                 var result = await _movieService.GetMovie(id);
                 return Ok(result);
             }
-            catch (EntityNotFoundException ex) { return NotFound(new { message = ex.Message }); }
-            catch (Exception ex) { return StatusCode(500, new { message = ex.Message }); }
+            catch (EntityNotFoundException ex)
+            { return NotFound(new { message = ex.Message }); }
+            catch (Exception ex)
+            { return StatusCode(500, new { message = ex.Message }); }
         }
 
+        // ── Get All Movies WITH PAGINATION - Public ───────────────
+        [HttpGet]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetAllMovies(
+            [FromQuery] int pageNumber = 1,
+            [FromQuery] int pageSize = 10)
+        {
+            var pagination = new PaginationDto
+            {
+                PageNumber = pageNumber,
+                PageSize = pageSize
+            };
+
+            try
+            {
+                var result = await _movieService
+                    .GetAllMovies(pagination);
+                return Ok(result);
+            }
+            catch (EntityNotFoundException ex)
+            { return NotFound(new { message = ex.Message }); }
+            catch (Exception ex)
+            { return StatusCode(500, new { message = ex.Message }); }
+        }
+
+        // ── Search Movies WITH PAGINATION - Public ────────────────
         [HttpGet("search")]
         [AllowAnonymous]
-        public async Task<IActionResult> SearchMovies([FromQuery] string keyword)
+        public async Task<IActionResult> SearchMovies(
+            [FromQuery] string? keyword,
+            [FromQuery] int pageNumber = 1,
+            [FromQuery] int pageSize = 10)
         {
-            // Step 1 - Validate keyword
             if (string.IsNullOrWhiteSpace(keyword))
-                return BadRequest(new { message = "Search keyword cannot be empty." });
+                return BadRequest(
+                    new { message = "Keyword cannot be empty." });
+
+            var pagination = new PaginationDto
+            {
+                PageNumber = pageNumber,
+                PageSize = pageSize
+            };
 
             try
             {
-                var result = await _movieService.SearchMovies(keyword);
-
-                if (result == null || !result.Any())
-                    return NotFound(new { message = $"No movies found for '{keyword}'." });
-
+                var result = await _movieService
+                    .SearchMovies(keyword, pagination);
                 return Ok(result);
             }
-            catch (Exception ex) { return StatusCode(500, new { message = ex.Message }); }
+            catch (EntityNotFoundException ex)
+            { return NotFound(new { message = ex.Message }); }
+            catch (BusinessRuleViolationException ex)
+            { return BadRequest(new { message = ex.Message }); }
+            catch (Exception ex)
+            { return StatusCode(500, new { message = ex.Message }); }
         }
 
+        // ── Get By Genre WITH PAGINATION - Public ─────────────────
         [HttpGet("genre/{genreId}")]
         [AllowAnonymous]
-        public async Task<IActionResult> GetMoviesByGenre(int genreId)
+        public async Task<IActionResult> GetMoviesByGenre(
+            int genreId,
+            [FromQuery] int pageNumber = 1,
+            [FromQuery] int pageSize = 10)
         {
-            // Step 1 - Validate genreId
             if (genreId <= 0)
-                return BadRequest(new { message = "Invalid genre ID." });
+                return BadRequest(
+                    new { message = "Invalid genre ID." });
+
+            var pagination = new PaginationDto
+            {
+                PageNumber = pageNumber,
+                PageSize = pageSize
+            };
 
             try
             {
-                var result = await _movieService.GetMoviesByGenre(genreId);
-
-                if (result == null || !result.Any())
-                    return NotFound(new { message = "No movies found for this genre." });
-
+                var result = await _movieService
+                    .GetMoviesByGenre(genreId, pagination);
                 return Ok(result);
             }
-            catch (Exception ex) { return StatusCode(500, new { message = ex.Message }); }
+            catch (EntityNotFoundException ex)
+            { return NotFound(new { message = ex.Message }); }
+            catch (BusinessRuleViolationException ex)
+            { return BadRequest(new { message = ex.Message }); }
+            catch (Exception ex)
+            { return StatusCode(500, new { message = ex.Message }); }
         }
+
+        // ── Update Movie - Admin + ContentManager ─────────────────
+        [HttpPut("{id}")]
+        [Authorize(Roles = "Admin,ContentManager")]
+        public async Task<IActionResult> UpdateMovie(
+            int id, [FromBody] MovieUpdateDto dto)
+        {
+            if (id <= 0)
+                return BadRequest(
+                    new { message = "Invalid movie ID." });
+
+            try
+            {
+                var result = await _movieService
+                    .UpdateMovie(id, dto);
+                return Ok(result);
+            }
+            catch (EntityNotFoundException ex)
+            { return NotFound(new { message = ex.Message }); }
+            catch (BusinessRuleViolationException ex)
+            { return BadRequest(new { message = ex.Message }); }
+            catch (Exception ex)
+            { return StatusCode(500, new { message = ex.Message }); }
+        }
+
+        // ── Delete Movie - Admin Only ─────────────────────────────
+        [HttpDelete("{id}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> DeleteMovie(int id)
+        {
+            if (id <= 0)
+                return BadRequest(
+                    new { message = "Invalid movie ID." });
+
+            try
+            {
+                var result = await _movieService.DeleteMovie(id);
+                return Ok(new
+                {
+                    message = "Movie deleted.",
+                    data = result
+                });
+            }
+            catch (EntityNotFoundException ex)
+            { return NotFound(new { message = ex.Message }); }
+            catch (Exception ex)
+            { return StatusCode(500, new { message = ex.Message }); }
+        }
+    }
+
+    // ✅ Wrapper class required by Swagger for IFormFile + FromForm
+    public class VideoUploadRequest
+    {
+        public IFormFile File { get; set; } = null!;
+        public int MovieId { get; set; }
     }
 }

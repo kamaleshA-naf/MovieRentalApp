@@ -30,13 +30,13 @@ namespace MovieRentalApp.Migrations
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    Title = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Title = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     Description = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     RentalPrice = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    AvailableCopies = table.Column<int>(type: "int", nullable: false),
-                    Director = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    ReleaseYear = table.Column<int>(type: "int", nullable: true),
-                    Rating = table.Column<double>(type: "float", nullable: false)
+                    Director = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    ReleaseYear = table.Column<int>(type: "int", nullable: false),
+                    Rating = table.Column<double>(type: "float", nullable: false),
+                    VideoUrl = table.Column<string>(type: "nvarchar(max)", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -141,6 +141,7 @@ namespace MovieRentalApp.Migrations
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     UserId = table.Column<int>(type: "int", nullable: false),
+                    RentalId = table.Column<int>(type: "int", nullable: false),
                     Amount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
                     Method = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     Status = table.Column<string>(type: "nvarchar(max)", nullable: false),
@@ -219,9 +220,29 @@ namespace MovieRentalApp.Migrations
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_MovieGenres_GenreId",
+                name: "IX_MovieGenre_GenreId",
                 table: "MovieGenres",
                 column: "GenreId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_MovieGenre_MovieId",
+                table: "MovieGenres",
+                column: "MovieId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Movie_Director",
+                table: "Movies",
+                column: "Director");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Movie_ReleaseYear",
+                table: "Movies",
+                column: "ReleaseYear");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Movie_Title",
+                table: "Movies",
+                column: "Title");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Notifications_UserId",

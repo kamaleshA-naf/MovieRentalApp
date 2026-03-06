@@ -6,11 +6,8 @@ namespace MovieRentalApp.Contexts
     public class MovieContext : DbContext
     {
         public MovieContext(DbContextOptions<MovieContext> options)
-            : base(options)
-        {
-        }
+            : base(options) { }
 
-        // ── DbSets ────────────────────────────────────────────────
         public DbSet<User> Users { get; set; }
         public DbSet<Movie> Movies { get; set; }
         public DbSet<Genre> Genres { get; set; }
@@ -20,7 +17,6 @@ namespace MovieRentalApp.Contexts
         public DbSet<Wishlist> Wishlists { get; set; }
         public DbSet<AuditLog> AuditLogs { get; set; }
         public DbSet<Notification> Notifications { get; set; }
-
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -42,10 +38,14 @@ namespace MovieRentalApp.Contexts
                 .HasForeignKey(mg => mg.GenreId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // ── User (Role stored as string enum) ─────────────────
+            // ── User ──────────────────────────────────────────────
             modelBuilder.Entity<User>()
                 .Property(u => u.Role)
-                .HasConversion<string>(); // stores "Admin","Customer","ContentManager"
+                .HasConversion<string>();
+
+            modelBuilder.Entity<User>()
+                .Property(u => u.UserId)
+                .UseIdentityColumn(seed: 1, increment: 1);
 
             // ── Rental ────────────────────────────────────────────
             modelBuilder.Entity<Rental>()
@@ -60,7 +60,7 @@ namespace MovieRentalApp.Contexts
                 .HasForeignKey(r => r.MovieId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // ── Payment ───────────────────────────────────────────
+            // ── Payment ✅ Added RentalId FK ──────────────────────
             modelBuilder.Entity<Payment>()
                 .HasOne(p => p.User)
                 .WithMany(u => u.Payments)
@@ -102,11 +102,34 @@ namespace MovieRentalApp.Contexts
                 .WithMany()
                 .HasForeignKey(a => a.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            // ── Notification ──────────────────────────────────────
             modelBuilder.Entity<Notification>()
                 .HasOne(n => n.User)
                 .WithMany()
                 .HasForeignKey(n => n.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            // ── ✅ DB Indexes for performance ─────────────────────
+            modelBuilder.Entity<Movie>()
+                .HasIndex(m => m.Title)
+                .HasDatabaseName("IX_Movie_Title");
+
+            modelBuilder.Entity<Movie>()
+                .HasIndex(m => m.ReleaseYear)
+                .HasDatabaseName("IX_Movie_ReleaseYear");
+
+            modelBuilder.Entity<Movie>()
+                .HasIndex(m => m.Director)
+                .HasDatabaseName("IX_Movie_Director");
+
+            modelBuilder.Entity<MovieGenre>()
+                .HasIndex(mg => mg.GenreId)
+                .HasDatabaseName("IX_MovieGenre_GenreId");
+
+            modelBuilder.Entity<MovieGenre>()
+                .HasIndex(mg => mg.MovieId)
+                .HasDatabaseName("IX_MovieGenre_MovieId");
         }
     }
 }

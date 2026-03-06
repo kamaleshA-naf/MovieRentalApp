@@ -16,33 +16,7 @@ namespace MovieRentalApp.Repositories
             _dbSet = _context.Set<T>();
         }
 
-        // GET ALL
-        public async Task<IEnumerable<T>> GetAllAsync()
-        {
-            return await _dbSet.ToListAsync();
-        }
-
-        // GET BY ID
-        public async Task<T?> GetByIdAsync(K id)
-        {
-            return await _dbSet.FindAsync(id);
-        }
-
-        // FIND (WHERE)
-        public async Task<IEnumerable<T>> FindAsync(
-            Expression<Func<T, bool>> predicate)
-        {
-            return await _dbSet.Where(predicate).ToListAsync();
-        }
-
-        // EXISTS
-        public async Task<bool> ExistsAsync(K id)
-        {
-            var entity = await _dbSet.FindAsync(id);
-            return entity != null;
-        }
-
-        // ADD
+        // ── Add ───────────────────────────────────────────────────
         public async Task<T> AddAsync(T entity)
         {
             await _dbSet.AddAsync(entity);
@@ -50,7 +24,51 @@ namespace MovieRentalApp.Repositories
             return entity;
         }
 
-        // UPDATE
+        // ── Get By Id ─────────────────────────────────────────────
+        public async Task<T?> GetByIdAsync(K id)
+        {
+            return await _dbSet.FindAsync(id);
+        }
+
+        // ── Get All ✅ AsNoTracking ────────────────────────────────
+        public async Task<IEnumerable<T>> GetAllAsync()
+        {
+            return await _dbSet.AsNoTracking().ToListAsync();
+        }
+
+        // ── Find ✅ AsNoTracking ───────────────────────────────────
+        public async Task<IEnumerable<T>> FindAsync(
+            Expression<Func<T, bool>> predicate)
+        {
+            return await _dbSet
+                .AsNoTracking()
+                .Where(predicate)
+                .ToListAsync();
+        }
+
+        // ── Exists ────────────────────────────────────────────────
+        public async Task<bool> ExistsAsync(K id)
+        {
+            return await _dbSet.FindAsync(id) != null;
+        }
+
+        // ── Get All With Include ✅ AsNoTracking + multi-include ───
+        public async Task<IEnumerable<T>> GetAllWithIncludeAsync(
+            params Expression<Func<T, object>>[] includes)
+        {
+            IQueryable<T> query = _dbSet.AsNoTracking();
+            foreach (var include in includes)
+                query = query.Include(include);
+            return await query.ToListAsync();
+        }
+
+        // ── GetQueryable ✅ DB-side pagination ────────────────────
+        public IQueryable<T> GetQueryable()
+        {
+            return _dbSet.AsNoTracking().AsQueryable();
+        }
+
+        // ── Update ────────────────────────────────────────────────
         public async Task<T?> UpdateAsync(K id, T entity)
         {
             var existing = await _dbSet.FindAsync(id);
@@ -61,7 +79,7 @@ namespace MovieRentalApp.Repositories
             return existing;
         }
 
-        // DELETE
+        // ── Delete ────────────────────────────────────────────────
         public async Task<bool> DeleteAsync(K id)
         {
             var entity = await _dbSet.FindAsync(id);
@@ -70,16 +88,6 @@ namespace MovieRentalApp.Repositories
             _dbSet.Remove(entity);
             await _context.SaveChangesAsync();
             return true;
-        }
-
-        // GET ALL WITH INCLUDE
-        public async Task<IEnumerable<T>> GetAllWithIncludeAsync(
-            params Expression<Func<T, object>>[] includes)
-        {
-            IQueryable<T> query = _dbSet;
-            foreach (var include in includes)
-                query = query.Include(include);
-            return await query.ToListAsync();
         }
     }
 }

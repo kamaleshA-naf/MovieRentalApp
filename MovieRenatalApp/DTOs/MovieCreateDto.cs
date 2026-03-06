@@ -5,22 +5,19 @@ namespace MovieRentalApp.Models.DTOs
     public class MovieCreateDto
     {
         [Required(ErrorMessage = "Title is required.")]
-        [StringLength(200, ErrorMessage = "Title cannot exceed 200 characters.")]
         public string Title { get; set; } = string.Empty;
+        public string? Description { get; set; }
 
-        [StringLength(1000)]
-        public string Description { get; set; } = string.Empty;
-
-        [Required]
-        [Range(0.01, 10000, ErrorMessage = "Rental price must be greater than 0.")]
+        [Range(0.01, double.MaxValue,
+            ErrorMessage = "Rental price must be greater than zero.")]
         public decimal RentalPrice { get; set; }
 
-        [Required]
-        [Range(0, int.MaxValue, ErrorMessage = "Available copies cannot be negative.")]
-        public int AvailableCopies { get; set; }
-
         public string? Director { get; set; }
-        public int? ReleaseYear { get; set; }
-        public List<int> GenreIds { get; set; } = new();
+        public int ReleaseYear { get; set; }
+        public double Rating { get; set; }
+        public List<int>? GenreIds { get; set; }
+
+        // ✅ Video URL saved after upload
+        public string? VideoUrl { get; set; }
     }
 }

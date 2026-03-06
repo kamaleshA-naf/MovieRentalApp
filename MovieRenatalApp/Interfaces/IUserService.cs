@@ -10,5 +10,6 @@ namespace MovieRentalApp.Interfaces
         Task<IEnumerable<UserResponseDto>> GetAllUsers();
         Task<UserResponseDto> UpdateUser(int id, UserUpdateDto dto);
         Task<UserResponseDto> DeleteUser(int id);
+        Task<string> ChangePassword(ChangePasswordDto dto);
     }
 }

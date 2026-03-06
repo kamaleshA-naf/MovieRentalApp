@@ -12,7 +12,12 @@ namespace MovieRentalApp.Interfaces
         Task<IEnumerable<T>> FindAsync(
             Expression<Func<T, bool>> predicate);
         Task<bool> ExistsAsync(K id);
+
+        // ✅ Multiple includes - fixes GetAllWithIncludeAsync
         Task<IEnumerable<T>> GetAllWithIncludeAsync(
             params Expression<Func<T, object>>[] includes);
+
+        // ✅ IQueryable for DB-side pagination (no memory load)
+        IQueryable<T> GetQueryable();
     }
 }

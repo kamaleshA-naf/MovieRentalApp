@@ -1,3 +1,4 @@
+using AspNetCoreRateLimit;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -8,7 +9,6 @@ using MovieRentalApp.Models;
 using MovieRentalApp.Repositories;
 using MovieRentalApp.Services;
 using System.Text;
-using AspNetCoreRateLimit;
 
 namespace MovieRentalApp
 {
@@ -24,8 +24,10 @@ namespace MovieRentalApp
                     builder.Configuration
                            .GetConnectionString("Development")));
 
-            // ── Repositories (Generic) ────────────────────────────
+            // ── ✅ Cache (only once) ───────────────────────────────
+            builder.Services.AddMemoryCache();
 
+            // ── Repositories ──────────────────────────────────────
             builder.Services.AddScoped<IRepository<int, User>, Repository<int, User>>();
             builder.Services.AddScoped<IRepository<int, Movie>, Repository<int, Movie>>();
             builder.Services.AddScoped<IRepository<int, Rental>, Repository<int, Rental>>();
@@ -34,8 +36,7 @@ namespace MovieRentalApp
             builder.Services.AddScoped<IRepository<int, Genre>, Repository<int, Genre>>();
             builder.Services.AddScoped<IRepository<int, MovieGenre>, Repository<int, MovieGenre>>();
             builder.Services.AddScoped<IRepository<int, AuditLog>, Repository<int, AuditLog>>();
-            builder.Services.AddScoped<IRepository<int, Notification>,Repository<int, Notification> > ();
-
+            builder.Services.AddScoped<IRepository<int, Notification>, Repository<int, Notification>>();
 
             // ── Services ──────────────────────────────────────────
             builder.Services.AddScoped<IPasswordService, PasswordService>();
@@ -49,14 +50,25 @@ namespace MovieRentalApp
             builder.Services.AddScoped<INotificationService, NotificationService>();
             builder.Services.AddScoped<IGenreService, GenreService>();
 
-            // ── JWT Authentication ─────────────────────────────────
+            #region CORS
+            builder.Services.AddCors(options =>
+            {
+                options.AddDefaultPolicy(policy =>
+                {
+                    policy.AllowAnyOrigin()
+                          .AllowAnyMethod()
+                          .AllowAnyHeader();
+                });
+            });
+            #endregion
+            // ── JWT ───────────────────────────────────────────────
             var jwtKey = builder.Configuration["Keys:Jwt"];
             if (string.IsNullOrEmpty(jwtKey))
                 throw new InvalidOperationException(
                     "JWT Key is missing from appsettings.json.");
 
-            builder.Services.AddAuthentication(
-                JwtBearerDefaults.AuthenticationScheme)
+            builder.Services
+                .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 .AddJwtBearer(options =>
                 {
                     options.TokenValidationParameters =
@@ -74,14 +86,16 @@ namespace MovieRentalApp
                         };
                 });
 
+            // ── Rate Limiting ─────────────────────────────────────
+            builder.Services.Configure<IpRateLimitOptions>(
+                builder.Configuration.GetSection("IpRateLimiting"));
+            builder.Services.AddInMemoryRateLimiting();
+            builder.Services.AddSingleton<IRateLimitConfiguration,
+                RateLimitConfiguration>();
+
             // ── Controllers ───────────────────────────────────────
             builder.Services.AddControllers();
             builder.Services.AddEndpointsApiExplorer();
-
-            builder.Services.AddMemoryCache();
-            builder.Services.Configure<IpRateLimitOptions>(builder.Configuration.GetSection("IpRateLimiting"));
-            builder.Services.AddInMemoryRateLimiting();
-            builder.Services.AddSingleton<IRateLimitConfiguration, RateLimitConfiguration>();
 
             // ── Swagger ───────────────────────────────────────────
             builder.Services.AddSwaggerGen(options =>
@@ -91,7 +105,6 @@ namespace MovieRentalApp
                     Title = "Movie Rental API",
                     Version = "v1"
                 });
-
                 options.AddSecurityDefinition("Bearer",
                     new OpenApiSecurityScheme
                     {
@@ -102,7 +115,6 @@ namespace MovieRentalApp
                         In = ParameterLocation.Header,
                         Description = "Enter your JWT token."
                     });
-
                 options.AddSecurityRequirement(
                     new OpenApiSecurityRequirement
                     {
@@ -136,12 +148,15 @@ namespace MovieRentalApp
             }
 
             app.UseHttpsRedirection();
-            app.UseAuthentication();   // ← Before Authorization
+
+            // ✅ Serve uploaded video files statically
+            app.UseStaticFiles();
+            app.UseCors();
+            app.UseAuthentication();
             app.UseAuthorization();
             app.UseIpRateLimiting();
             app.MapControllers();
             app.Run();
-
         }
     }
 }
