@@ -22,7 +22,7 @@ namespace MovieRentalApp.Controllers
         [Authorize(Roles = "Customer,Admin")]
         public async Task<IActionResult> AddToWishlist([FromBody] WishlistCreateDto dto)
         {
-            // Step 1 - Validate input
+           
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
@@ -42,7 +42,7 @@ namespace MovieRentalApp.Controllers
         [Authorize(Roles = "Customer,Admin")]
         public async Task<IActionResult> GetWishlist(int userId)
         {
-            // Step 1 - Validate userId
+           
             if (userId <= 0)
                 return BadRequest(new { message = "Invalid user ID." });
 
@@ -50,7 +50,7 @@ namespace MovieRentalApp.Controllers
             {
                 var result = await _wishlistService.GetWishlistByUser(userId);
 
-                // Step 2 - Check if empty
+                
                 if (result == null || !result.Any())
                     return NotFound(new { message = "Wishlist is empty for this user." });
 
@@ -64,7 +64,7 @@ namespace MovieRentalApp.Controllers
         [Authorize(Roles = "Customer")]
         public async Task<IActionResult> RemoveFromWishlist(int id)
         {
-            // Step 1 - Validate id
+            
             if (id <= 0)
                 return BadRequest(new { message = "Invalid wishlist item ID." });
 

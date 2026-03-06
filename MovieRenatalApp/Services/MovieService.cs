@@ -30,7 +30,7 @@ namespace MovieRentalApp.Services
             _cache = cache;
         }
 
-        // ── Helper - Genre Dict WITH CACHE ────────────────────────
+       
         private async Task<Dictionary<int, string>> BuildGenreDict()
         {
             if (_cache.TryGetValue(
@@ -50,7 +50,7 @@ namespace MovieRentalApp.Services
             return dict;
         }
 
-        // ── Helper - Map to Dto ───────────────────────────────────
+       
         private static MovieResponseDto MapToDto(
             Movie movie,
             IEnumerable<MovieGenre> movieGenres,
@@ -80,7 +80,7 @@ namespace MovieRentalApp.Services
             };
         }
 
-        // ── Add Movie ─────────────────────────────────────────────
+       
         public async Task<MovieResponseDto> AddMovie(MovieCreateDto dto)
         {
             if (string.IsNullOrWhiteSpace(dto.Title))
@@ -124,7 +124,7 @@ namespace MovieRentalApp.Services
             return MapToDto(created, movieGenres, genreDict);
         }
 
-        // ── Get Movie By Id ───────────────────────────────────────
+       
         public async Task<MovieResponseDto> GetMovie(int id)
         {
             if (id <= 0)
@@ -141,7 +141,7 @@ namespace MovieRentalApp.Services
             return MapToDto(movie, movieGenres, genreDict);
         }
 
-        // ── Get All Movies ✅ DB PAGINATION ───────────────────────
+        
         public async Task<PagedResultDto<MovieResponseDto>> GetAllMovies(
             PaginationDto pagination)
         {
@@ -150,18 +150,18 @@ namespace MovieRentalApp.Services
                 .GetQueryable()
                 .OrderByDescending(m => m.Id);
 
-            // Step 2 - Count in DB
+            
             var totalCount = await query.CountAsync();
             if (totalCount == 0)
                 throw new EntityNotFoundException("No movies found.");
 
-            // Step 3 - Only fetch current page from DB
+            
             var movies = await query
                 .Skip((pagination.PageNumber - 1) * pagination.PageSize)
                 .Take(pagination.PageSize)
                 .ToListAsync();
 
-            // Step 4 - Load genres only for this page's movies
+           
             var movieIds = movies.Select(m => m.Id).ToList();
             var movieGenres = await _movieGenreRepository
                 .FindAsync(mg => movieIds.Contains(mg.MovieId));
@@ -183,7 +183,7 @@ namespace MovieRentalApp.Services
             };
         }
 
-        // ── Search Movies ✅ DB FILTER + PAGINATION ───────────────
+        
         public async Task<PagedResultDto<MovieResponseDto>> SearchMovies(
             string keyword, PaginationDto pagination)
         {
@@ -231,7 +231,7 @@ namespace MovieRentalApp.Services
             };
         }
 
-        // ── Get By Genre ✅ Fixed N+1 + DB PAGINATION ─────────────
+        
         public async Task<PagedResultDto<MovieResponseDto>> GetMoviesByGenre(
             int genreId, PaginationDto pagination)
         {
@@ -243,14 +243,14 @@ namespace MovieRentalApp.Services
             if (!genreDict.ContainsKey(genreId))
                 throw new EntityNotFoundException("Genre", genreId);
 
-            // Step 1 - Get all movieIds for this genre (1 DB call)
+           
             var genreMovies = await _movieGenreRepository
                 .FindAsync(mg => mg.GenreId == genreId);
             if (!genreMovies.Any())
                 throw new EntityNotFoundException(
                     $"No movies found for genre ID {genreId}.");
 
-            // Step 2 - ✅ ONE query instead of N+1 loop
+          
             var movieIds = genreMovies
                 .Select(mg => mg.MovieId).ToList();
 
@@ -286,7 +286,7 @@ namespace MovieRentalApp.Services
             };
         }
 
-        // ── Update Movie ──────────────────────────────────────────
+        
         public async Task<MovieResponseDto> UpdateMovie(
             int id, MovieUpdateDto dto)
         {
@@ -319,7 +319,7 @@ namespace MovieRentalApp.Services
             return MapToDto(movie, movieGenres, genreDict);
         }
 
-        // ── Delete Movie ──────────────────────────────────────────
+      
         public async Task<MovieResponseDto> DeleteMovie(int id)
         {
             if (id <= 0)

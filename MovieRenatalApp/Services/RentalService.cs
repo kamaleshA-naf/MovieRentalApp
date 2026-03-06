@@ -26,17 +26,17 @@ namespace MovieRentalApp.Services
 
         public async Task<RentalResponseDto> RentMovie(RentalCreateDto dto)
         {
-            // Step 1 - Validate user
+            
             var user = await _userRepository.GetByIdAsync(dto.UserId);
             if (user == null)
                 throw new EntityNotFoundException("User", dto.UserId);
 
-            // Step 2 - Validate movie
+            
             var movie = await _movieRepository.GetByIdAsync(dto.MovieId);
             if (movie == null)
                 throw new EntityNotFoundException("Movie", dto.MovieId);
 
-            // Step 3 - Check duplicate active rental
+            
             var existing = await _rentalRepository.FindAsync(
                 r => r.UserId == dto.UserId &&
                      r.MovieId == dto.MovieId &&
@@ -45,7 +45,7 @@ namespace MovieRentalApp.Services
                 throw new BusinessRuleViolationException(
                     $"You already have '{movie.Title}' rented.");
 
-            // Step 4 - Create rental
+           
             var rental = new Rental
             {
                 UserId = dto.UserId,
@@ -56,7 +56,7 @@ namespace MovieRentalApp.Services
             };
             await _rentalRepository.AddAsync(rental);
 
-            // Step 5 - ✅ Auto payment linked to rental
+            
             await _paymentRepository.AddAsync(new Payment
             {
                 UserId = dto.UserId,

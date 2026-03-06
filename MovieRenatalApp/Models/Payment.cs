@@ -6,7 +6,7 @@
         public int UserId { get; set; }
         public User User { get; set; } = null!;
 
-        // ✅ Links payment to specific rental
+        
         public int RentalId { get; set; }
 
         public decimal Amount { get; set; }

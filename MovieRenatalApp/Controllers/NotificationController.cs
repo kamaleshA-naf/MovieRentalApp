@@ -18,12 +18,12 @@ namespace MovieRentalApp.Controllers
             _notificationService = notificationService;
         }
 
-        // ── Customer + Admin ──────────────────────────────────────
+        
         [HttpGet("user/{userId}")]
         [Authorize(Roles = "Customer,Admin")]
         public async Task<IActionResult> GetUserNotifications(int userId)
         {
-            // Step 1 - Validate userId
+            
             if (userId <= 0)
                 return BadRequest(new { message = "Invalid user ID." });
 
@@ -41,7 +41,7 @@ namespace MovieRentalApp.Controllers
         [Authorize(Roles = "Customer,Admin")]
         public async Task<IActionResult> MarkAsRead(int id)
         {
-            // Step 1 - Validate id
+           
             if (id <= 0)
                 return BadRequest(new { message = "Invalid notification ID." });
 
@@ -59,7 +59,7 @@ namespace MovieRentalApp.Controllers
         [Authorize(Roles = "Customer,Admin")]
         public async Task<IActionResult> MarkAllAsRead(int userId)
         {
-            // Step 1 - Validate userId
+           
             if (userId <= 0)
                 return BadRequest(new { message = "Invalid user ID." });
 
@@ -73,7 +73,7 @@ namespace MovieRentalApp.Controllers
             catch (Exception ex) { return StatusCode(500, new { message = ex.Message }); }
         }
 
-        // ── Admin Only ────────────────────────────────────────────
+        
         [HttpPost("send-expiry-reminders")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> SendExpiryReminders()
@@ -90,7 +90,7 @@ namespace MovieRentalApp.Controllers
         [Authorize(Roles = "Admin,ContentManager")]
         public async Task<IActionResult> SendNewReleaseNotification(int movieId)
         {
-            // Step 1 - Validate movieId
+            //Validate movieId
             if (movieId <= 0)
                 return BadRequest(new { message = "Invalid movie ID." });
 

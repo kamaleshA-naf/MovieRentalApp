@@ -22,7 +22,7 @@ namespace MovieRentalApp.Contexts
         {
             base.OnModelCreating(modelBuilder);
 
-            // ── MovieGenre (composite key) ─────────────────────────
+            
             modelBuilder.Entity<MovieGenre>()
                 .HasKey(mg => new { mg.MovieId, mg.GenreId });
 
@@ -38,7 +38,7 @@ namespace MovieRentalApp.Contexts
                 .HasForeignKey(mg => mg.GenreId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // ── User ──────────────────────────────────────────────
+           
             modelBuilder.Entity<User>()
                 .Property(u => u.Role)
                 .HasConversion<string>();
@@ -47,7 +47,7 @@ namespace MovieRentalApp.Contexts
                 .Property(u => u.UserId)
                 .UseIdentityColumn(seed: 1, increment: 1);
 
-            // ── Rental ────────────────────────────────────────────
+           
             modelBuilder.Entity<Rental>()
                 .HasOne(r => r.User)
                 .WithMany(u => u.Rentals)
@@ -60,7 +60,7 @@ namespace MovieRentalApp.Contexts
                 .HasForeignKey(r => r.MovieId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // ── Payment ✅ Added RentalId FK ──────────────────────
+            
             modelBuilder.Entity<Payment>()
                 .HasOne(p => p.User)
                 .WithMany(u => u.Payments)
@@ -71,12 +71,12 @@ namespace MovieRentalApp.Contexts
                 .Property(p => p.Amount)
                 .HasColumnType("decimal(18,2)");
 
-            // ── Movie ─────────────────────────────────────────────
+            
             modelBuilder.Entity<Movie>()
                 .Property(m => m.RentalPrice)
                 .HasColumnType("decimal(18,2)");
 
-            // ── Wishlist ──────────────────────────────────────────
+            
             modelBuilder.Entity<Wishlist>()
                 .HasOne(w => w.User)
                 .WithMany(u => u.Wishlists)
@@ -93,7 +93,7 @@ namespace MovieRentalApp.Contexts
                 .HasIndex(w => new { w.UserId, w.MovieId })
                 .IsUnique();
 
-            // ── AuditLog ──────────────────────────────────────────
+            
             modelBuilder.Entity<AuditLog>()
                 .HasKey(a => a.LogId);
 
@@ -103,14 +103,14 @@ namespace MovieRentalApp.Contexts
                 .HasForeignKey(a => a.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // ── Notification ──────────────────────────────────────
+            
             modelBuilder.Entity<Notification>()
                 .HasOne(n => n.User)
                 .WithMany()
                 .HasForeignKey(n => n.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // ── ✅ DB Indexes for performance ─────────────────────
+             
             modelBuilder.Entity<Movie>()
                 .HasIndex(m => m.Title)
                 .HasDatabaseName("IX_Movie_Title");

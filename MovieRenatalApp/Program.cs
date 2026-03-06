@@ -18,16 +18,16 @@ namespace MovieRentalApp
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            // ── Database ──────────────────────────────────────────
+            //     Database
             builder.Services.AddDbContext<MovieContext>(options =>
                 options.UseSqlServer(
                     builder.Configuration
                            .GetConnectionString("Development")));
 
-            // ── ✅ Cache (only once) ───────────────────────────────
+          
             builder.Services.AddMemoryCache();
 
-            // ── Repositories ──────────────────────────────────────
+            //     Repositories 
             builder.Services.AddScoped<IRepository<int, User>, Repository<int, User>>();
             builder.Services.AddScoped<IRepository<int, Movie>, Repository<int, Movie>>();
             builder.Services.AddScoped<IRepository<int, Rental>, Repository<int, Rental>>();
@@ -38,7 +38,7 @@ namespace MovieRentalApp
             builder.Services.AddScoped<IRepository<int, AuditLog>, Repository<int, AuditLog>>();
             builder.Services.AddScoped<IRepository<int, Notification>, Repository<int, Notification>>();
 
-            // ── Services ──────────────────────────────────────────
+            //   Services
             builder.Services.AddScoped<IPasswordService, PasswordService>();
             builder.Services.AddScoped<ITokenService, TokenService>();
             builder.Services.AddScoped<IMovieService, MovieService>();
@@ -61,7 +61,7 @@ namespace MovieRentalApp
                 });
             });
             #endregion
-            // ── JWT ───────────────────────────────────────────────
+            //     JWT
             var jwtKey = builder.Configuration["Keys:Jwt"];
             if (string.IsNullOrEmpty(jwtKey))
                 throw new InvalidOperationException(
@@ -86,18 +86,18 @@ namespace MovieRentalApp
                         };
                 });
 
-            // ── Rate Limiting ─────────────────────────────────────
+            //  Rate Limiting
             builder.Services.Configure<IpRateLimitOptions>(
                 builder.Configuration.GetSection("IpRateLimiting"));
             builder.Services.AddInMemoryRateLimiting();
             builder.Services.AddSingleton<IRateLimitConfiguration,
                 RateLimitConfiguration>();
 
-            // ── Controllers ───────────────────────────────────────
+            //  Controllers
             builder.Services.AddControllers();
             builder.Services.AddEndpointsApiExplorer();
 
-            // ── Swagger ───────────────────────────────────────────
+            //   Swger 
             builder.Services.AddSwaggerGen(options =>
             {
                 options.SwaggerDoc("v1", new OpenApiInfo
@@ -134,7 +134,7 @@ namespace MovieRentalApp
 
             var app = builder.Build();
 
-            // ── Pipeline ──────────────────────────────────────────
+            //  Pipeline 
             if (app.Environment.IsDevelopment())
             {
                 app.UseSwagger();
@@ -149,7 +149,7 @@ namespace MovieRentalApp
 
             app.UseHttpsRedirection();
 
-            // ✅ Serve uploaded video files statically
+            
             app.UseStaticFiles();
             app.UseCors();
             app.UseAuthentication();

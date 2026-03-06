@@ -10,7 +10,7 @@
         public int ReleaseYear { get; set; }
         public double Rating { get; set; }
 
-        // ✅ Returns video URL to client
+        
         public string? VideoUrl { get; set; }
 
         public List<GenreResponseDto> Genres { get; set; }

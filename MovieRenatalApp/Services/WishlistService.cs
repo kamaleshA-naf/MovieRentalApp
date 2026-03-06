@@ -23,24 +23,20 @@ namespace MovieRentalApp.Services
 
         public async Task<WishlistResponseDto> AddToWishlist(WishlistCreateDto dto)
         {
-            // Step 1 - Validate user
             var user = await _userRepository.GetByIdAsync(dto.UserId);
             if (user == null)
                 throw new EntityNotFoundException("User", dto.UserId);
 
-            // Step 2 - Validate movie
             var movie = await _movieRepository.GetByIdAsync(dto.MovieId);
             if (movie == null)
                 throw new EntityNotFoundException("Movie", dto.MovieId);
 
-            // Step 3 - Check duplicate
             var existing = await _wishlistRepository.FindAsync(
                 w => w.UserId == dto.UserId && w.MovieId == dto.MovieId);
             if (existing.Any())
                 throw new DuplicateEntityException(
                     $"'{movie.Title}' is already in your wishlist.");
 
-            // Step 4 - Add
             var wishlist = new Wishlist
             {
                 UserId = dto.UserId,
@@ -54,12 +50,10 @@ namespace MovieRentalApp.Services
 
         public async Task<IEnumerable<WishlistResponseDto>> GetWishlistByUser(int userId)
         {
-            // Step 1 - Validate user
             var userExists = await _userRepository.ExistsAsync(userId);
             if (!userExists)
                 throw new EntityNotFoundException("User", userId);
 
-            // Step 2 - Get wishlist with movie
             var items = await _wishlistRepository.GetAllWithIncludeAsync(
                 w => w.Movie);
 
@@ -70,16 +64,14 @@ namespace MovieRentalApp.Services
 
         public async Task<bool> RemoveFromWishlist(int wishlistId)
         {
-            // Step 1 - Check exists
+            
             var exists = await _wishlistRepository.ExistsAsync(wishlistId);
             if (!exists)
                 throw new EntityNotFoundException("Wishlist item", wishlistId);
 
-            // Step 2 - Delete
             return await _wishlistRepository.DeleteAsync(wishlistId);
         }
 
-        // ── Mapper ────────────────────────────────────────────────
         private static WishlistResponseDto MapToDto(
             Wishlist wishlist, Movie movie) => new()
             {

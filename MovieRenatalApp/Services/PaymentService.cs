@@ -18,20 +18,20 @@ namespace MovieRentalApp.Services
             _userRepository = userRepository;
         }
 
-        // ── Get Payment ───────────────────────────────────────────
+        
         public async Task<PaymentResponseDto> GetPayment(int id)
         {
-            // Step 1 - Validate id
+           
             if (id <= 0)
                 throw new BusinessRuleViolationException(
                     "Invalid payment ID.");
 
-            // Step 2 - Find payment with user
+            
             var payments = await _paymentRepository
                 .GetAllWithIncludeAsync(p => p.User);
             var payment = payments.FirstOrDefault(p => p.Id == id);
 
-            // Step 3 - Check if found
+            
             if (payment == null)
                 throw new EntityNotFoundException("Payment", id);
 
@@ -39,61 +39,61 @@ namespace MovieRentalApp.Services
             return MapToDto(payment);
         }
 
-        // ── Get Payments By User ──────────────────────────────────
+        
         public async Task<IEnumerable<PaymentResponseDto>> GetPaymentsByUser(
             int userId)
         {
-            // Step 1 - Validate user exists
+            
             var user = await _userRepository.GetByIdAsync(userId);
             if (user == null)
                 throw new EntityNotFoundException("User", userId);
 
-            // Step 2 - Get payments with user
+            
             var payments = await _paymentRepository
                 .GetAllWithIncludeAsync(p => p.User);
 
-            // Step 3 - Filter by user
+            
             var userPayments = payments
                 .Where(p => p.UserId == userId)
                 .OrderByDescending(p => p.PaymentDate)
                 .ToList();
 
-            // Step 4 - Check if empty
+            
             if (!userPayments.Any())
                 throw new EntityNotFoundException(
                     $"No payments found for user ID {userId}.");
 
-            // Step 5 - Return response
+            
             return userPayments.Select(MapToDto);
         }
 
-        // ── Get All Payments ──────────────────────────────────────
+        
         public async Task<IEnumerable<PaymentResponseDto>> GetAllPayments()
         {
-            // Step 1 - Get all with user
+            
             var payments = await _paymentRepository
                 .GetAllWithIncludeAsync(p => p.User);
 
-            // Step 2 - Check if empty
+            
             if (!payments.Any())
                 throw new EntityNotFoundException("No payments found.");
 
-            // Step 3 - Return ordered
+            
             return payments
                 .OrderByDescending(p => p.PaymentDate)
                 .Select(MapToDto);
         }
 
-        // ── Update Payment Status ─────────────────────────────────
+        
         public async Task<PaymentResponseDto> UpdatePaymentStatus(
             int id, string status)
         {
-            // Step 1 - Validate id
+            
             if (id <= 0)
                 throw new BusinessRuleViolationException(
                     "Invalid payment ID.");
 
-            // Step 2 - Validate status
+           
             var validStatuses = new[]
             {
                 "Completed", "Failed", "Refunded", "Pending"
@@ -103,28 +103,28 @@ namespace MovieRentalApp.Services
                     $"Invalid status. Valid: " +
                     $"{string.Join(", ", validStatuses)}");
 
-            // Step 3 - Find payment
+            
             var payment = await _paymentRepository.GetByIdAsync(id);
             if (payment == null)
                 throw new EntityNotFoundException("Payment", id);
 
-            // Step 4 - Check if already refunded
+            
             if (payment.Status == "Refunded")
                 throw new BusinessRuleViolationException(
                     "Cannot update a refunded payment.");
 
-            // Step 5 - Update status
+            
             payment.Status = status;
             await _paymentRepository.UpdateAsync(id, payment);
 
-            // Step 6 - Return updated with user
+            
             var payments = await _paymentRepository
                 .GetAllWithIncludeAsync(p => p.User);
             var updated = payments.FirstOrDefault(p => p.Id == id);
             return MapToDto(updated!);
         }
 
-        // ── Mapper ────────────────────────────────────────────────
+        
         private static PaymentResponseDto MapToDto(Payment p) => new()
         {
             Id = p.Id,

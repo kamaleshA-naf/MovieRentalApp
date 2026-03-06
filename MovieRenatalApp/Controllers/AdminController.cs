@@ -62,7 +62,7 @@ namespace MovieRentalApp.Controllers
         [HttpGet("payments/user/{userId}")]
         public async Task<IActionResult> GetPaymentsByUser(int userId)
         {
-            // Step 1 - Validate userId
+            
             if (userId <= 0)
                 return BadRequest(new { message = "Invalid user ID." });
 
@@ -97,7 +97,7 @@ namespace MovieRentalApp.Controllers
         [HttpGet("logs/user/{userId}")]
         public async Task<IActionResult> GetLogsByUser(int userId)
         {
-            // Step 1 - Validate userId
+            
             if (userId <= 0)
                 return BadRequest(new { message = "Invalid user ID." });
 
@@ -120,7 +120,7 @@ namespace MovieRentalApp.Controllers
             [FromQuery] string message,
             [FromQuery] string errorNumber)
         {
-            // Step 1 - Validate inputs
+            
             if (userId <= 0)
                 return BadRequest(new { message = "Invalid user ID." });
 
@@ -130,7 +130,7 @@ namespace MovieRentalApp.Controllers
             if (string.IsNullOrWhiteSpace(errorNumber))
                 return BadRequest(new { message = "Error number cannot be empty." });
 
-            // Step 2 - Create log
+            
             try
             {
                 var result = await _adminService.CreateLog(userId, message, errorNumber);

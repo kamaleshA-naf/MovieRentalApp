@@ -10,7 +10,7 @@
         public int ReleaseYear { get; set; }
         public double Rating { get; set; }
 
-        // ✅ Video file path - e.g. "/uploads/movies/avengers.mp4"
+        
         public string? VideoUrl { get; set; }
 
         public ICollection<MovieGenre> MovieGenres { get; set; }

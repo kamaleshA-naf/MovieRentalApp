@@ -16,7 +16,7 @@ namespace MovieRentalApp.Repositories
             _dbSet = _context.Set<T>();
         }
 
-        // ── Add ───────────────────────────────────────────────────
+       
         public async Task<T> AddAsync(T entity)
         {
             await _dbSet.AddAsync(entity);
@@ -24,19 +24,19 @@ namespace MovieRentalApp.Repositories
             return entity;
         }
 
-        // ── Get By Id ─────────────────────────────────────────────
+       
         public async Task<T?> GetByIdAsync(K id)
         {
             return await _dbSet.FindAsync(id);
         }
 
-        // ── Get All ✅ AsNoTracking ────────────────────────────────
+        
         public async Task<IEnumerable<T>> GetAllAsync()
         {
             return await _dbSet.AsNoTracking().ToListAsync();
         }
 
-        // ── Find ✅ AsNoTracking ───────────────────────────────────
+        
         public async Task<IEnumerable<T>> FindAsync(
             Expression<Func<T, bool>> predicate)
         {
@@ -46,13 +46,13 @@ namespace MovieRentalApp.Repositories
                 .ToListAsync();
         }
 
-        // ── Exists ────────────────────────────────────────────────
+       
         public async Task<bool> ExistsAsync(K id)
         {
             return await _dbSet.FindAsync(id) != null;
         }
 
-        // ── Get All With Include ✅ AsNoTracking + multi-include ───
+        
         public async Task<IEnumerable<T>> GetAllWithIncludeAsync(
             params Expression<Func<T, object>>[] includes)
         {
@@ -62,13 +62,13 @@ namespace MovieRentalApp.Repositories
             return await query.ToListAsync();
         }
 
-        // ── GetQueryable ✅ DB-side pagination ────────────────────
+        
         public IQueryable<T> GetQueryable()
         {
             return _dbSet.AsNoTracking().AsQueryable();
         }
 
-        // ── Update ────────────────────────────────────────────────
+        
         public async Task<T?> UpdateAsync(K id, T entity)
         {
             var existing = await _dbSet.FindAsync(id);
@@ -79,7 +79,7 @@ namespace MovieRentalApp.Repositories
             return existing;
         }
 
-        // ── Delete ────────────────────────────────────────────────
+        
         public async Task<bool> DeleteAsync(K id)
         {
             var entity = await _dbSet.FindAsync(id);

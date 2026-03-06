@@ -7,8 +7,8 @@
         public string UserName { get; set; } = string.Empty;
         public int MovieId { get; set; }
         public string MovieTitle { get; set; } = string.Empty;
-        public DateTime RentalDate { get; set; }   // ← trainer uses RentalDate
-        public DateTime ExpiryDate { get; set; }   // ← trainer uses ExpiryDate
+        public DateTime RentalDate { get; set; } 
+        public DateTime ExpiryDate { get; set; }   
         public string Status { get; set; } = string.Empty;
     }
 }

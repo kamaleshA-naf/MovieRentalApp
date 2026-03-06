@@ -22,11 +22,11 @@ namespace MovieRentalApp.Controllers
         [Authorize(Roles = "Customer,Admin")]
         public async Task<IActionResult> RentMovie([FromBody] RentalCreateDto dto)
         {
-            // Step 1 - Validate input
+            
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            // Step 2 - Try to rent
+           
             try
             {
                 var result = await _rentalService.RentMovie(dto);
@@ -42,7 +42,7 @@ namespace MovieRentalApp.Controllers
         [Authorize(Roles = "Customer,Admin")]
         public async Task<IActionResult> ReturnMovie(int id)
         {
-            // Step 1 - Validate id
+            
             if (id <= 0)
                 return BadRequest(new { message = "Invalid rental ID." });
 
@@ -60,7 +60,7 @@ namespace MovieRentalApp.Controllers
         [Authorize(Roles = "Customer,Admin")]
         public async Task<IActionResult> GetRental(int id)
         {
-            // Step 1 - Validate id
+            
             if (id <= 0)
                 return BadRequest(new { message = "Invalid rental ID." });
 
@@ -77,7 +77,7 @@ namespace MovieRentalApp.Controllers
         [Authorize(Roles = "Customer,Admin")]
         public async Task<IActionResult> GetRentalsByUser(int userId)
         {
-            // Step 1 - Validate userId
+            
             if (userId <= 0)
                 return BadRequest(new { message = "Invalid user ID." });
 
@@ -85,7 +85,7 @@ namespace MovieRentalApp.Controllers
             {
                 var result = await _rentalService.GetRentalsByUser(userId);
 
-                // Step 2 - Check if empty
+               
                 if (result == null || !result.Any())
                     return NotFound(new { message = "No rentals found for this user." });
 

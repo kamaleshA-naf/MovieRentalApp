@@ -27,22 +27,22 @@ namespace MovieRentalApp.Services
             _auditLogRepository = auditLogRepository;
         }
 
-        // ── Dashboard ─────────────────────────────────────────────
+        
         public async Task<DashboardStatsDto> GetDashboardStats()
         {
-            // Step 1 - Get all data
+            
             var users = await _userRepository.GetAllAsync();
             var movies = await _movieRepository.GetAllAsync();
             var rentals = await _rentalRepository.GetAllAsync();
             var payments = await _paymentRepository.GetAllAsync();
 
-            // Step 2 - Calculate stats
+           
             var totalRevenue = payments.Any()
                 ? payments.Sum(p => p.Amount) : 0;
             var activeRentals = rentals
                 .Where(r => r.Status == "Active").Count();
 
-            // Step 3 - Return dashboard
+            
             return new DashboardStatsDto
             {
                 TotalUsers = users.Count(),
@@ -54,19 +54,19 @@ namespace MovieRentalApp.Services
             };
         }
 
-        // ── Get All Users With Rentals ────────────────────────────
+        
         public async Task<IEnumerable<UserRentalSummaryDto>> GetAllUsersWithRentals()
         {
-            // Step 1 - Get all users
+            
             var users = await _userRepository.GetAllAsync();
             if (!users.Any())
                 throw new EntityNotFoundException("No users found.");
 
-            // Step 2 - Get all rentals
+            
             var rentals = await _rentalRepository
                 .GetAllWithIncludeAsync(r => r.Movie);
 
-            // Step 3 - Build summary
+            
             var summary = users.Select(u => new UserRentalSummaryDto
             {
                 UserId = u.UserId,
@@ -89,18 +89,18 @@ namespace MovieRentalApp.Services
                     }).ToList()
             }).ToList();
 
-            // Step 4 - Return
+            
             return summary;
         }
 
-        // ── Get All Payments ──────────────────────────────────────
+       
         public async Task<PaymentSummaryDto> GetAllPayments()
         {
-            // Step 1 - Get all payments with user
+           
             var payments = await _paymentRepository
                 .GetAllWithIncludeAsync(p => p.User);
 
-            // Step 2 - Build summary
+            
             return new PaymentSummaryDto
             {
                 TotalRevenue = payments.Any()
@@ -121,31 +121,31 @@ namespace MovieRentalApp.Services
             };
         }
 
-        // ── Get Payments By User ──────────────────────────────────
+        
         public async Task<IEnumerable<PaymentDetailDto>> GetPaymentsByUser(
             int userId)
         {
-            // Step 1 - Validate user exists
+            
             var user = await _userRepository.GetByIdAsync(userId);
             if (user == null)
                 throw new EntityNotFoundException("User", userId);
 
-            // Step 2 - Get payments
+            
             var payments = await _paymentRepository
                 .GetAllWithIncludeAsync(p => p.User);
 
-            // Step 3 - Filter by user
+            
             var userPayments = payments
                 .Where(p => p.UserId == userId)
                 .OrderByDescending(p => p.PaymentDate)
                 .ToList();
 
-            // Step 4 - Check empty
+            
             if (!userPayments.Any())
                 throw new EntityNotFoundException(
                     $"No payments found for user ID {userId}.");
 
-            // Step 5 - Return
+            
             return userPayments.Select(p => new PaymentDetailDto
             {
                 Id = p.Id,
@@ -158,48 +158,48 @@ namespace MovieRentalApp.Services
             });
         }
 
-        // ── Get All Logs ──────────────────────────────────────────
+       
         public async Task<IEnumerable<AuditLogResponseDto>> GetAllLogs()
         {
-            // Step 1 - Get all logs
+           
             var logs = await _auditLogRepository
                 .GetAllWithIncludeAsync(a => a.User);
             if (!logs.Any())
                 throw new EntityNotFoundException("No logs found.");
 
-            // Step 2 - Return ordered
+            
             return logs
                 .OrderByDescending(a => a.CreatedAt)
                 .Select(MapToLogDto);
         }
 
-        // ── Get Logs By User ──────────────────────────────────────
+        
         public async Task<IEnumerable<AuditLogResponseDto>> GetLogsByUser(
             int userId)
         {
-            // Step 1 - Validate user
+            
             var user = await _userRepository.GetByIdAsync(userId);
             if (user == null)
                 throw new EntityNotFoundException("User", userId);
 
-            // Step 2 - Get logs
+            
             var logs = await _auditLogRepository
                 .FindAsync(a => a.UserId == userId);
             if (!logs.Any())
                 throw new EntityNotFoundException(
                     $"No logs found for user ID {userId}.");
 
-            // Step 3 - Return
+            
             return logs
                 .OrderByDescending(a => a.CreatedAt)
                 .Select(MapToLogDto);
         }
 
-        // ── Create Log ────────────────────────────────────────────
+        
         public async Task<AuditLogResponseDto> CreateLog(
             int userId, string message, string errorNumber)
         {
-            // Step 1 - Validate inputs
+            
             if (userId <= 0)
                 throw new BusinessRuleViolationException(
                     "Invalid user ID.");
@@ -210,12 +210,12 @@ namespace MovieRentalApp.Services
                 throw new BusinessRuleViolationException(
                     "Error number cannot be empty.");
 
-            // Step 2 - Find user
+            
             var user = await _userRepository.GetByIdAsync(userId);
             if (user == null)
                 throw new EntityNotFoundException("User", userId);
 
-            // Step 3 - Create log
+            
             var log = new AuditLog
             {
                 UserId = userId,
@@ -226,14 +226,14 @@ namespace MovieRentalApp.Services
                 CreatedAt = DateTime.UtcNow
             };
 
-            // Step 4 - Save log
+            
             var created = await _auditLogRepository.AddAsync(log);
 
             // Step 5 - Return
             return MapToLogDto(created);
         }
 
-        // ── Mapper ────────────────────────────────────────────────
+        
         private static AuditLogResponseDto MapToLogDto(AuditLog a) => new()
         {
             LogId = a.LogId,

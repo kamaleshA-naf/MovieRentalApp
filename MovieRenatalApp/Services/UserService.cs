@@ -165,17 +165,14 @@ namespace MovieRentalApp.Services
                 throw new BusinessRuleViolationException(
                     "Invalid user ID.");
 
-            // Step 2 - Validate new password
             if (string.IsNullOrWhiteSpace(dto.NewPassword))
                 throw new BusinessRuleViolationException(
                     "New password cannot be empty.");
 
-            // Step 3 - Find user
             var user = await _userRepository.GetByIdAsync(dto.UserId);
             if (user == null)
                 throw new EntityNotFoundException("User", dto.UserId);
 
-            // Step 4 - Verify old password
             var hashedOldPassword = _passwordService.HashPassword(
                 dto.OldPassword,
                 user.PasswordSaltValue,
@@ -184,28 +181,24 @@ namespace MovieRentalApp.Services
                 throw new UnauthorizedException(
                     "Old password is incorrect.");
 
-            // Step 5 - Check new password is not same as old
             if (dto.OldPassword == dto.NewPassword)
                 throw new BusinessRuleViolationException(
                     "New password cannot be same as old password.");
 
-            // Step 6 - Hash new password
             var hashedNewPassword = _passwordService.HashPassword(
                 dto.NewPassword,
                 null,
                 out byte[]? newHashKey);
 
-            // Step 7 - Update in DB
             user.Password = hashedNewPassword;
             user.PasswordSaltValue = newHashKey!;
             await _userRepository.UpdateAsync(user.UserId, user);
 
-            // Step 8 - Return success
+            
             return "Password changed successfully.";
         }
 
 
-        // ── Mapper ────────────────────────────────────────────────
         private static UserResponseDto MapToDto(User user) => new()
         {
             Id = user.UserId,

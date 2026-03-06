@@ -17,12 +17,11 @@ namespace MovieRentalApp.Controllers
             _paymentService = paymentService;
         }
 
-        // ── Customer + Admin ──────────────────────────────────────
         [HttpGet("{id}")]
         [Authorize(Roles = "Customer,Admin")]
         public async Task<IActionResult> GetPayment(int id)
         {
-            // Step 1 - Validate id
+            
             if (id <= 0)
                 return BadRequest(new { message = "Invalid payment ID." });
 
@@ -39,7 +38,7 @@ namespace MovieRentalApp.Controllers
         [Authorize(Roles = "Customer,Admin")]
         public async Task<IActionResult> GetPaymentsByUser(int userId)
         {
-            // Step 1 - Validate userId
+            
             if (userId <= 0)
                 return BadRequest(new { message = "Invalid user ID." });
 
@@ -52,7 +51,7 @@ namespace MovieRentalApp.Controllers
             catch (Exception ex) { return StatusCode(500, new { message = ex.Message }); }
         }
 
-        // ── Admin Only ────────────────────────────────────────────
+       
         [HttpGet]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetAllPayments()
@@ -71,7 +70,7 @@ namespace MovieRentalApp.Controllers
         public async Task<IActionResult> UpdatePaymentStatus(
             int id, [FromQuery] string status)
         {
-            // Step 1 - Validate inputs
+            
             if (id <= 0)
                 return BadRequest(new { message = "Invalid payment ID." });
 

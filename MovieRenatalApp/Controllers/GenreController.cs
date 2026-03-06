@@ -17,7 +17,6 @@ namespace MovieRentalApp.Controllers
             _genreService = genreService;
         }
 
-        // ── Public ────────────────────────────────────────────────
         [HttpGet]
         [AllowAnonymous]
         public async Task<IActionResult> GetAllGenres()
@@ -31,12 +30,12 @@ namespace MovieRentalApp.Controllers
             catch (Exception ex) { return StatusCode(500, new { message = ex.Message }); }
         }
 
-        // ── Admin + ContentManager ────────────────────────────────
+        
         [HttpPost]
         [Authorize(Roles = "Admin,ContentManager")]
         public async Task<IActionResult> AddGenre([FromBody] GenreCreateDto dto)
         {
-            // Step 1 - Validate input
+            
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
@@ -49,12 +48,11 @@ namespace MovieRentalApp.Controllers
             catch (Exception ex) { return StatusCode(500, new { message = ex.Message }); }
         }
 
-        // ── Admin Only ────────────────────────────────────────────
-        [HttpDelete("{id}")]
+        
         [Authorize(Roles = "Admin,ContentManager")]
         public async Task<IActionResult> DeleteGenre(int id)
         {
-            // Step 1 - Validate id
+            
             if (id <= 0)
                 return BadRequest(new { message = "Invalid genre ID." });
 

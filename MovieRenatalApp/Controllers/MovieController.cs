@@ -21,7 +21,7 @@ namespace MovieRentalApp.Controllers
             _env = env;
         }
 
-        // ── Add Movie - Admin + ContentManager ────────────────────
+        
         [HttpPost("AddMovie")]
         [Authorize(Roles = "Admin,ContentManager")]
         public async Task<IActionResult> AddMovie(
@@ -53,12 +53,12 @@ namespace MovieRentalApp.Controllers
         public async Task<IActionResult> UploadMovieVideo(
             [FromForm] VideoUploadRequest request)
         {
-            // Step 1 - Validate file exists
+            //  Validate file exists
             if (request.File == null || request.File.Length == 0)
                 return BadRequest(
                     new { message = "No file uploaded." });
 
-            // Step 2 - Validate file type (video only)
+            //  Validate file type (video only)
             var allowedTypes = new[]
             {
                 "video/mp4", "video/avi",
@@ -72,7 +72,7 @@ namespace MovieRentalApp.Controllers
                               "Allowed: mp4, avi, mkv, webm."
                 });
 
-            // Step 3 - Validate file size (max 500MB)
+            //  Validate file size (max 500MB)
             const long maxSize = 500L * 1024 * 1024;
             if (request.File.Length > maxSize)
                 return BadRequest(new
@@ -80,41 +80,41 @@ namespace MovieRentalApp.Controllers
                     message = "File too large. Maximum size is 500MB."
                 });
 
-            // Step 4 - Validate movieId
+            //  Validate movieId
             if (request.MovieId <= 0)
                 return BadRequest(
                     new { message = "Invalid movie ID." });
 
             try
             {
-                // Step 5 - Check movie exists first
+                // Check movie exists first
                 var movie = await _movieService
                     .GetMovie(request.MovieId);
 
-                // Step 6 - Create upload folder if not exists
+                //  Create upload folder if not exists
                 var uploadFolder = Path.Combine(
                     _env.WebRootPath ?? "wwwroot",
                     "uploads", "movies");
                 Directory.CreateDirectory(uploadFolder);
 
-                // Step 7 - Generate unique filename
+                //  Generate unique filename
                 var ext = Path.GetExtension(
                     request.File.FileName).ToLower();
                 var fileName = $"movie_{request.MovieId}_" +
                                $"{Guid.NewGuid()}{ext}";
                 var filePath = Path.Combine(uploadFolder, fileName);
 
-                // Step 8 - Save video file to disk
+                // Save video file to disk
                 using (var stream = new FileStream(
                     filePath, FileMode.Create))
                 {
                     await request.File.CopyToAsync(stream);
                 }
 
-                // Step 9 - Build public URL
+                //  Build public URL
                 var videoUrl = $"/uploads/movies/{fileName}";
 
-                // Step 10 - Update movie with new VideoUrl
+                //  Update movie with new VideoUrl
                 var updateDto = new MovieUpdateDto
                 {
                     Title = movie.Title,
@@ -128,7 +128,7 @@ namespace MovieRentalApp.Controllers
                 await _movieService.UpdateMovie(
                     request.MovieId, updateDto);
 
-                // Step 11 - Return success with URL
+                //  Return success with URL
                 return Ok(new
                 {
                     message = "Video uploaded successfully.",
@@ -142,7 +142,7 @@ namespace MovieRentalApp.Controllers
             { return StatusCode(500, new { message = ex.Message }); }
         }
 
-        // ── Get Single Movie - Public ─────────────────────────────
+        
         [HttpGet("{id}")]
         [AllowAnonymous]
         public async Task<IActionResult> GetMovie(int id)
@@ -162,7 +162,7 @@ namespace MovieRentalApp.Controllers
             { return StatusCode(500, new { message = ex.Message }); }
         }
 
-        // ── Get All Movies WITH PAGINATION - Public ───────────────
+        
         [HttpGet]
         [AllowAnonymous]
         public async Task<IActionResult> GetAllMovies(
@@ -187,7 +187,7 @@ namespace MovieRentalApp.Controllers
             { return StatusCode(500, new { message = ex.Message }); }
         }
 
-        // ── Search Movies WITH PAGINATION - Public ────────────────
+        
         [HttpGet("search")]
         [AllowAnonymous]
         public async Task<IActionResult> SearchMovies(
@@ -219,7 +219,7 @@ namespace MovieRentalApp.Controllers
             { return StatusCode(500, new { message = ex.Message }); }
         }
 
-        // ── Get By Genre WITH PAGINATION - Public ─────────────────
+        
         [HttpGet("genre/{genreId}")]
         [AllowAnonymous]
         public async Task<IActionResult> GetMoviesByGenre(
@@ -251,7 +251,7 @@ namespace MovieRentalApp.Controllers
             { return StatusCode(500, new { message = ex.Message }); }
         }
 
-        // ── Update Movie - Admin + ContentManager ─────────────────
+        
         [HttpPut("{id}")]
         [Authorize(Roles = "Admin,ContentManager")]
         public async Task<IActionResult> UpdateMovie(
@@ -275,7 +275,7 @@ namespace MovieRentalApp.Controllers
             { return StatusCode(500, new { message = ex.Message }); }
         }
 
-        // ── Delete Movie - Admin Only ─────────────────────────────
+        
         [HttpDelete("{id}")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteMovie(int id)
@@ -300,7 +300,7 @@ namespace MovieRentalApp.Controllers
         }
     }
 
-    // ✅ Wrapper class required by Swagger for IFormFile + FromForm
+    
     public class VideoUploadRequest
     {
         public IFormFile File { get; set; } = null!;

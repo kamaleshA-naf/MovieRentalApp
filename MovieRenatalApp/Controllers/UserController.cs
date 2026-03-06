@@ -19,27 +19,27 @@ namespace MovieRentalApp.Controllers
             _userService = userService;
         }
 
-        // ── Helper - Get logged in userId from JWT ────────────────
+        
         private int GetLoggedInUserId()
         {
             var claim = User.FindFirst(ClaimTypes.NameIdentifier);
             return claim != null ? int.Parse(claim.Value) : 0;
         }
 
-        // ── Helper - Get logged in role from JWT ──────────────────
+       
         private string GetLoggedInRole()
         {
             var claim = User.FindFirst(ClaimTypes.Role);
             return claim?.Value ?? "";
         }
 
-        // ── Register ──────────────────────────────────────────────
+        
         [HttpPost("register")]
         [AllowAnonymous]
         public async Task<IActionResult> Register(
             [FromBody] UserCreateDto dto)
         {
-            // Step 1 - Validate input
+           
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
@@ -57,13 +57,13 @@ namespace MovieRentalApp.Controllers
             { return StatusCode(500, new { message = ex.Message }); }
         }
 
-        // ── Login ─────────────────────────────────────────────────
+        
         [HttpPost("login")]
         [AllowAnonymous]
         public async Task<IActionResult> Login(
             [FromBody] LoginDto dto)
         {
-            // Step 1 - Validate input
+           
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
@@ -80,7 +80,7 @@ namespace MovieRentalApp.Controllers
             { return StatusCode(500, new { message = ex.Message }); }
         }
 
-        // ── Get All Users - Admin Only ────────────────────────────
+        
         [HttpGet]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetAllUsers()
@@ -96,21 +96,21 @@ namespace MovieRentalApp.Controllers
             { return StatusCode(500, new { message = ex.Message }); }
         }
 
-        // ── Get User By Id ────────────────────────────────────────
+        
         [HttpGet("{id}")]
         [Authorize]
         public async Task<IActionResult> GetUser(int id)
         {
-            // Step 1 - Validate id
+          
             if (id <= 0)
                 return BadRequest(
                     new { message = "Invalid user ID." });
 
-            // Step 2 - Get logged in info
+            
             var loggedInUserId = GetLoggedInUserId();
             var loggedInRole = GetLoggedInRole();
 
-            // Step 3 - Customer can only view own profile
+            
             if (loggedInRole == "Customer" &&
                 loggedInUserId != id)
                 return StatusCode(403, new
@@ -130,26 +130,25 @@ namespace MovieRentalApp.Controllers
             { return StatusCode(500, new { message = ex.Message }); }
         }
 
-        // ── Update User ───────────────────────────────────────────
         [HttpPut("{id}")]
         [Authorize]
         public async Task<IActionResult> UpdateUser(
             int id, [FromBody] UserUpdateDto dto)
         {
-            // Step 1 - Validate input
+           
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            // Step 2 - Validate id
+            
             if (id <= 0)
                 return BadRequest(
                     new { message = "Invalid user ID." });
 
-            // Step 3 - Get logged in info
+            
             var loggedInUserId = GetLoggedInUserId();
             var loggedInRole = GetLoggedInRole();
 
-            // Step 4 - Customer can only update own profile
+           //customer they update owm profilee
             if (loggedInRole == "Customer" &&
                 loggedInUserId != id)
                 return StatusCode(403, new
