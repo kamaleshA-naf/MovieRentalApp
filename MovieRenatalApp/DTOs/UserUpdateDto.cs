@@ -7,7 +7,7 @@ namespace MovieRentalApp.Models.DTOs
         [StringLength(100)]
         public string? Name { get; set; }
 
-        //[EmailAddress]
-        //public string? Email { get; set; }
+        
+       
     }
 }
