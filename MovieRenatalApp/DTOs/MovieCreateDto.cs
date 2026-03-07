@@ -17,7 +17,7 @@ namespace MovieRentalApp.Models.DTOs
         public double Rating { get; set; }
         public List<int>? GenreIds { get; set; }
 
-        // ✅ Video URL saved after upload
+        
         public string? VideoUrl { get; set; }
     }
 }
